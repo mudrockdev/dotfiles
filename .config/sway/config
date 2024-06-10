@@ -1,0 +1,9 @@
+bindsym Shift+f exec gamemoderun waydroid show-full-ui
+
+default_border none
+default_floating_border none
+font pango:monospace 0
+titlebar_padding 1
+titlebar_border_thickness 0
+
+bindsym Shift+p exec waydroid session stop
