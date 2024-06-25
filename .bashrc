@@ -69,13 +69,56 @@ alias neo="neofetch"
 
 # needs reboot
 fixrepos() {
-if command -v resolvectl &> /dev/null
-then
-  sudo apt clean
-  sudo resolvectl flush-caches
-  sudo apt update
-else
-  sudo apt-get install -y systemd-resolved
-  fixrepos
-fi
+	if command -v resolvectl &> /dev/null
+		then
+  		sudo apt clean
+  		sudo resolvectl flush-caches
+  		sudo apt update
+	else
+  	echo "Get the systemd-resolved package"
+	fi
+}
+
+exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+setwacom() {
+  if exists xsetwacom; then
+    :
+  else
+    echo "You don't have xsetwacom"
+    exit
+  fi
+  if exists xrandr; then
+    :
+  else
+    echo "You don't have xrandr"
+    exit
+  fi
+
+  WACOMDEVICES=$(xsetwacom list devices)
+  CHOSENDISPLAY=$1
+  MONITORPORT=""
+  ACTIVEMONITORS=$(xrandr --listactivemonitors)
+  MONITORARR=()
+  for i in $ACTIVEMONITORS; do
+    MONITORARR+=("$i")
+  done
+  if [[ $# > 0  ]]; then
+    NUM=$(($1*4 + 1))
+    MONITORPORT=${MONITORARR[$NUM]}
+  else
+    MONITORPORT=${MONITORARR[5]}
+  fi
+  GETIDNUM=false
+  for DEVICEINFO in $WACOMDEVICES; do
+    if [[ $GETIDNUM == true ]]; then
+      GETIDNUM=false
+      xsetwacom --set "$DEVICEINFO" MapToOutput $MONITORPORT
+    fi
+    if [[ $DEVICEINFO == "id:" ]]; then
+      GETIDNUM=true
+    fi
+  done
 }
