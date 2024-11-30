@@ -1,4 +1,4 @@
-bindsym Shift+f exec gamemoderun waydroid show-full-ui
+bindsym Shift+f exec waydroid show-full-ui
 
 default_border none
 default_floating_border none
