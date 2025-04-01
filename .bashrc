@@ -34,15 +34,15 @@ source "$OSH/oh-my-bash.sh"
 # user
 
 export PAGER="less"
-export EDITOR="nano"
+export EDITOR="micro"
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS=@im=fcitx
 
-if [ -d "$HOME/.local/bin" ]; then
-    export PATH="$HOME/.local/bin:$PATH"
-fi
-
-HISTCONTROL=ignoreboth
-HISTSIZE=1000
-HISTFILESIZE=2000
+export HISTFILE=/$HOME/.var/bash_history
+export HISTCONTROL=ignoreboth
+export HISTSIZE=1000
+export HISTFILESIZE=2000
 
 shopt -s checkwinsize
 shopt -s autocd # change to named directory
@@ -53,22 +53,54 @@ shopt -s histappend # do not overwrite history
 shopt -s expand_aliases # expand aliases
 bind -s 'set completion-ignore-case on' # make commands case-insensitive
 
+export PODMAN_COMPOSE_WARNING_LOGS=false
+
 alias c="clear"
 alias services="sudo systemctl list-units --type=service --all"
-alias grubmk="sudo grub-mkconfig -o /boot/grub/grub.cfg"
+alias grubmk="sudo grub2-mkconfig -o /boot/grub2/grub.cfg"
 alias wget="wget -c"
 alias grep='grep --color=auto'
 alias ls="ls --color=auto"
-alias leserver="ssh .."
-alias neo="neowofetch"
+alias leserver="ssh ..@.."
+alias neo="fastfetch"
 alias mntjf="sudo mount -t nfs 192.168.1.200:/mnt/jellyfin-media /mnt/valen"
-# shellcheck disable=SC2139
 alias fpurge="flatpak uninstall --delete-data $1"
+alias apu="sudo dnf up && flatpak update && flatpak uninstall --unused"
+alias k="kubectl"
+alias kk="k0s kubectl"
+alias ff="fastfetch"
 
-alias yarn="corepack yarn"
-alias yarnpkg="corepack yarnpkg"
-alias pnpm="corepack pnpm"
-alias pnpx="corepack pnpx"
+if [ -d "$HOME/.local/bin" ]; then
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
+if [ -d "$HOME/go/bin" ]; then
+    export PATH="$HOME/go/bin:$PATH"
+fi
+
+if [ -d "$HOME/.bun" ]; then
+    export BUN_INSTALL="$HOME/.bun"
+    export PATH=$BUN_INSTALL/bin:$PATH
+fi
+
+if [ -d "$HOME/Android" ]; then
+    export ANDROID_HOME="$HOME/Android"
+    export PATH="$PATH:$ANDROID_HOME/Sdk/emulator"
+    export PATH="$PATH:$ANDROID_HOME/Sdk/platform-tools"
+    export NDK_HOME="$HOME/Android/Sdk/ndk/28.0.12916984"
+fi
+
+if [ -d "$HOME/.config/nvm" ]; then
+    export NVM_DIR="$HOME/.config/nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+fi
+
+if [ -d "$HOME/.var/.pyenv" ]; then
+    export PYENV_ROOT="$HOME/.var/.pyenv"
+    [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init - bash)"
+fi
 
 exists() {
   command -v "$1" >/dev/null 2>&1
