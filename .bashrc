@@ -9,7 +9,7 @@ case $- in
 esac
 
 export OSH='/home/mudrock/.oh-my-bash'
-export OSH_THEME="brainy"
+export OSH_THEME="brainy" # brainy
 export DISABLE_AUTO_UPDATE="true"
 export OMB_PROMPT_SHOW_PYTHON_VENV=true
 
@@ -18,6 +18,12 @@ export completions=(
   composer
   ssh
   pip3
+  npm
+  rake
+  maven
+  nvm
+  tmux
+  pip
 )
 
 export aliases=(
@@ -31,10 +37,8 @@ export plugins=(
 
 source "$OSH/oh-my-bash.sh"
 
-# user
-
 export PAGER="less"
-export EDITOR="micro"
+export EDITOR="nano"
 export GTK_IM_MODULE=fcitx
 export QT_IM_MODULE=fcitx
 export XMODIFIERS=@im=fcitx
@@ -61,7 +65,6 @@ alias grubmk="sudo grub2-mkconfig -o /boot/grub2/grub.cfg"
 alias wget="wget -c"
 alias grep='grep --color=auto'
 alias ls="ls --color=auto"
-alias leserver="ssh ..@.."
 alias neo="fastfetch"
 alias mntjf="sudo mount -t nfs 192.168.1.200:/mnt/jellyfin-media /mnt/valen"
 alias fpurge="flatpak uninstall --delete-data $1"
@@ -69,6 +72,16 @@ alias apu="sudo dnf up && flatpak update && flatpak uninstall --unused"
 alias k="kubectl"
 alias kk="k0s kubectl"
 alias ff="fastfetch"
+alias vpnon="sudo tailscale up --exit-node=100.78.190.126"
+alias vpnoff="sudo tailscale up --exit-node="
+
+sscosmicinteractive() {
+  wl-copy < "$(cosmic-screenshot --interactive)"
+}
+
+sscosmicfull() {
+  cosmic-screenshot --interactive=false
+}
 
 if [ -d "$HOME/.local/bin" ]; then
     export PATH="$HOME/.local/bin:$PATH"
