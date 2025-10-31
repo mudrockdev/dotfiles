@@ -1,0 +1,6 @@
+{
+ "Wacom One by Wacom S Pen": (
+    state: Enabled,
+    map_to_output: Some("DP-1")
+  )
+}
