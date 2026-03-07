@@ -1,6 +1,7 @@
 font-size = 10
 window-height = 130
 window-width = 40
+window-decoration = server
 background = #000000
 alpha-blending = native
 background-opacity = 0.7
