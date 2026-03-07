@@ -1,0 +1,11 @@
+font-size = 10
+window-height = 130
+window-width = 40
+background = #000000
+alpha-blending = native
+background-opacity = 0.7
+background-image = /home/mudrock/.var/wallpaper/n/1278984.jpg
+background-image-fit = cover
+background-image-opacity = 0.2
+selection-foreground = #5555ff
+selection-background = #99c1f1
