@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Vesktop Proxy
+Exec=flatpak run dev.vencord.Vesktop --proxy-server="http://100.78.190.126:8118"
+Icon=dev.vencord.Vesktop
+Type=Application
+MimeType=x-scheme-handler/discord

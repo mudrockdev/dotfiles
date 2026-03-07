@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Brave Browser Proxy
+Exec=flatpak run com.brave.Browser --proxy-server="http://100.78.190.126:8118"
+Icon=com.brave.Browser
+Type=Application
+MimeType=x-scheme-handler/discord
