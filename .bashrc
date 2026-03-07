@@ -45,8 +45,8 @@ export XMODIFIERS=@im=fcitx
 
 export HISTFILE=/$HOME/.var/bash_history
 export HISTCONTROL=ignoreboth
-export HISTSIZE=1000
-export HISTFILESIZE=2000
+export HISTSIZE=99999
+export HISTFILESIZE=99999
 
 shopt -s checkwinsize
 shopt -s autocd # change to named directory
@@ -179,3 +179,15 @@ setwacom() {
     done
   fi
 }
+
+if [ -d "$HOME/.cargo" ]; then
+  . "$HOME/.cargo/env"
+fi
+
+if exists rbenv; then
+  eval "$(rbenv init - --o-rehash bash)"
+fi
+
+if [ $TERM = 'xterm-ghostty' ]; then
+  export TERM=xterm-256color
+fi
