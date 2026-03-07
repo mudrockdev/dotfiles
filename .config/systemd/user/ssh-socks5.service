@@ -1,0 +1,11 @@
+[Unit]
+Description=SSH SOCKS5 Proxy
+After=network.target
+
+[Service]
+ExecStart=ssh -N -D 3306 user@host
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

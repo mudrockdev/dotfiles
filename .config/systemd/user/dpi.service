@@ -1,0 +1,9 @@
+[Unit]
+Description=SpoofDPI
+
+[Service]
+Type=simple
+ExecStart=spoofdpi -system-proxy -port 14444 -dns-addr 77.88.8.8 -dns-port 1253
+
+[Install]
+WantedBy=default.target
