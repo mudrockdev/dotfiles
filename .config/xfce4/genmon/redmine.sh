@@ -124,4 +124,7 @@ TOOLTIP=$(jq -r "$ROWS" <<< "$JSON" \
 
 echo -e "$TEXT"
 echo -e "<tool>$TOOLTIP</tool>"
+# genmon binds <click> to the icon/button area and <txtclick> to the label;
+# there is no <img> here, so <txtclick> is the one that actually fires.
+echo -e "<txtclick>$SELF menu</txtclick>"
 echo -e "<click>$SELF menu</click>"
