@@ -243,6 +243,11 @@ RowLayout {
 
         anchorItem: target ?? root
         maxWidth: 1800
+
+        // Son pencere de kapanınca seçiciyi kapat
+        readonly property int windowCount: target?.windows.length ?? 0
+        onWindowCountChanged: if (visible && windowCount === 0)
+            visible = false
         minWidth: 0
         padding: 8
 
@@ -314,6 +319,36 @@ RowLayout {
                                 Toplevels.activate(card.modelData);
                                 picker.visible = false;
                             }
+                        }
+                    }
+
+                    HoverHandler {
+                        id: cardHover
+                    }
+
+                    // Kapat düğmesi (üzerine gelince görünür)
+                    Rectangle {
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                        anchors.margins: 4
+                        width: 24
+                        height: 24
+                        radius: 12
+                        visible: cardHover.hovered
+                        color: closeMa.pressed ? Qt.darker(Theme.accent, 1.2) : closeMa.containsMouse ? Theme.accent : Qt.rgba(0, 0, 0, 0.65)
+
+                        Icon {
+                            anchors.centerIn: parent
+                            icon: "window-close-symbolic"
+                            size: 14
+                        }
+
+                        MouseArea {
+                            id: closeMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Toplevels.close(card.modelData)
                         }
                     }
                 }
