@@ -63,7 +63,8 @@ RowLayout {
 
             Icon {
                 icon: btn.modelData.icon
-                colorize: false
+                // Sembolik ikonlar (ör. fcitx: input-keyboard-symbolic) koyu çizilir; COSMIC gibi boya
+                colorize: btn.modelData.icon.includes("-symbolic")
                 size: 16
             }
 
@@ -182,7 +183,7 @@ RowLayout {
                         Icon {
                             visible: entry.modelData.icon !== ""
                             icon: entry.modelData.icon
-                            colorize: false
+                            colorize: entry.modelData.icon.includes("-symbolic")
                             size: 16
                         }
 

@@ -18,8 +18,16 @@ Singleton {
         if (current && current.visible) {
             justClosed = current;
             current.visible = false;
+            expire.restart();
         } else {
             justClosed = null;
         }
+    }
+
+    // Bayrak yalnızca aynı tıklama için geçerli; takılı kalıp sonraki menüleri engellemesin
+    Timer {
+        id: expire
+        interval: 600
+        onTriggered: root.justClosed = null
     }
 }
