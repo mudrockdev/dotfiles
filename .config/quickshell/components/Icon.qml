@@ -1,5 +1,5 @@
 import QtQuick
-import Qt5Compat.GraphicalEffects
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Widgets
 import qs
@@ -31,14 +31,13 @@ Item {
                 return i;
             return Quickshell.iconPath(i, root.fallback);
         }
-        visible: !root.colorize
-    }
-
-    ColorOverlay {
-        anchors.fill: img
-        source: img
-        color: root.color
-        visible: root.colorize
-        cached: false
+        // Sembolik ikonu tek renge boya (önce beyaza çek, sonra renklendir).
+        // QtQuick.Effects qt6-qtdeclarative ile gelir; ek bağımlılık yok.
+        layer.enabled: root.colorize
+        layer.effect: MultiEffect {
+            brightness: 1.0
+            colorization: 1.0
+            colorizationColor: root.color
+        }
     }
 }

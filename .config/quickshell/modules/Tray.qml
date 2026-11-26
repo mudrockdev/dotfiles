@@ -33,6 +33,9 @@ RowLayout {
         menu.visible = true;
     }
 
+    // Eksik bağımlılık varsa uyarı simgesi (yoksa görünmez)
+    DepsWarning {}
+
     Repeater {
         model: SystemTray.items
 
