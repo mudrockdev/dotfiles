@@ -1,0 +1,46 @@
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import qs
+
+// Panel butonunun altında açılan menü. Dışarı tıklayınca kapanır (grabFocus).
+PopupWindow {
+    id: root
+
+    property Item anchorItem
+    property int padding: 12
+    property int minWidth: 240
+    property int maxWidth: 380
+    default property alias content: layout.data
+
+    function toggle() {
+        visible = !visible;
+    }
+
+    anchor.item: anchorItem
+    anchor.edges: Edges.Bottom
+    anchor.gravity: Edges.Bottom
+    anchor.adjustment: PopupAdjustment.Slide | PopupAdjustment.FlipY
+    grabFocus: true
+    visible: false
+    color: "transparent"
+
+    implicitWidth: Math.min(maxWidth, Math.max(minWidth, layout.implicitWidth + padding * 2))
+    implicitHeight: layout.implicitHeight + padding * 2 + 4
+
+    Rectangle {
+        anchors.fill: parent
+        anchors.topMargin: 4
+        color: Theme.popupBg
+        radius: 10
+        border.color: Theme.border
+        border.width: 1
+
+        ColumnLayout {
+            id: layout
+            anchors.fill: parent
+            anchors.margins: root.padding
+            spacing: 6
+        }
+    }
+}
