@@ -114,7 +114,7 @@ RowLayout {
         // alt menüdeyken geri
         MenuItem {
             visible: menu.stack.length > 0
-            text: "Geri"
+            text: "Back"
             icon: "go-previous-symbolic"
             onTriggered: menu.stack = menu.stack.slice(0, -1)
         }

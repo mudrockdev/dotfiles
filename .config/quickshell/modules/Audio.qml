@@ -119,13 +119,13 @@ BarButton {
         Separator {}
 
         DeviceSection {
-            title: "Çıkış"
+            title: "Output"
             nodes: root.sinks
             current: root.sink
             onSelected: node => Pipewire.preferredDefaultAudioSink = node
         }
         DeviceSection {
-            title: "Giriş"
+            title: "Input"
             nodes: root.sources
             current: root.source
             onSelected: node => Pipewire.preferredDefaultAudioSource = node
@@ -145,14 +145,14 @@ BarButton {
 
         Separator {}
         Toggle {
-            text: "Panelde medya kontrollerini göster"
+            text: "Show media controls on panel"
             checked: Settings.showMediaControls
             onToggled: Settings.showMediaControls = !Settings.showMediaControls
         }
 
         Separator {}
         MenuItem {
-            text: "Ses ayarları…"
+            text: "Sound settings…"
             onTriggered: {
                 Quickshell.execDetached(Config.settingsCommand.concat(["sound"]));
                 popup.visible = false;

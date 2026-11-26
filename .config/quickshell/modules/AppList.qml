@@ -178,7 +178,7 @@ RowLayout {
         }
 
         MenuItem {
-            text: "Yeni pencere"
+            text: "New window"
             icon: "window-new-symbolic"
             onTriggered: {
                 root.launch(menu.target.key, menu.target.entry);
@@ -203,7 +203,7 @@ RowLayout {
 
         MenuItem {
             visible: menu.target?.pinned ?? false
-            text: "Başlatıcılardan kaldır"
+            text: "Unpin from launchers"
             icon: "view-pin-symbolic"
             onTriggered: {
                 const key = menu.target.key;
@@ -214,7 +214,7 @@ RowLayout {
 
         MenuItem {
             visible: !(menu.target?.pinned ?? true)
-            text: "Başlatıcılara sabitle"
+            text: "Pin to launchers"
             icon: "view-pin-symbolic"
             onTriggered: {
                 const key = menu.target.key;
@@ -225,7 +225,7 @@ RowLayout {
 
         MenuItem {
             visible: (menu.target?.windows.length ?? 0) > 0
-            text: menu.target?.windows.length > 1 ? "Tümünü kapat" : "Kapat"
+            text: menu.target?.windows.length > 1 ? "Close all" : "Close"
             icon: "window-close-symbolic"
             onTriggered: {
                 for (const w of menu.target.windows)

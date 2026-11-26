@@ -29,7 +29,7 @@ BarButton {
         maxWidth: 420
 
         SectionTitle {
-            text: "Eksik bağımlılıklar"
+            text: "Missing dependencies"
         }
 
         Repeater {
@@ -49,7 +49,7 @@ BarButton {
         Separator {}
 
         MenuItem {
-            text: "Kurulum komutunu kopyala"
+            text: "Copy install command"
             subtitle: Deps.installCommand
             icon: "edit-copy-symbolic"
             onTriggered: {
@@ -58,7 +58,7 @@ BarButton {
             }
         }
         MenuItem {
-            text: "Yeniden denetle"
+            text: "Check again"
             icon: "view-refresh-symbolic"
             onTriggered: Deps.check()
         }

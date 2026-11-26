@@ -47,13 +47,13 @@ BarButton {
     function failText(reason) {
         switch (reason) {
         case ConnectionFailReason.NoSecrets:
-            return "Parola yanlış ya da gerekli";
+            return "Wrong or missing password";
         case ConnectionFailReason.WifiAuthTimeout:
-            return "Kimlik doğrulama zaman aşımına uğradı";
+            return "Authentication timed out";
         case ConnectionFailReason.WifiNetworkLost:
-            return "Ağ kayboldu";
+            return "Network lost";
         default:
-            return "Bağlanılamadı";
+            return "Could not connect";
         }
     }
 
@@ -115,7 +115,7 @@ BarButton {
         // ---------- Uçak modu ----------
         Toggle {
             visible: Net.hasRfkill
-            text: "Uçak modu"
+            text: "Airplane mode"
             icon: "airplane-mode-symbolic"
             checked: Net.airplaneMode
             onToggled: Net.setAirplaneMode(!Net.airplaneMode)
@@ -146,7 +146,7 @@ BarButton {
                     icon: "network-vpn-symbolic"
                     bold: false
                     checked: vpnRow.modelData.state === "activated" || vpnRow.modelData.state === "activating"
-                    subtitle: vpnRow.modelData.state === "activating" ? "Bağlanıyor…" : vpnRow.modelData.state === "deactivating" ? "Kesiliyor…" : vpnRow.err !== "" && Net.vpnPasswordFor !== vpnRow.modelData.uuid ? vpnRow.err : vpnRow.modelData.state === "activated" ? "Bağlı" : ""
+                    subtitle: vpnRow.modelData.state === "activating" ? "Connecting…" : vpnRow.modelData.state === "deactivating" ? "Disconnecting…" : vpnRow.err !== "" && Net.vpnPasswordFor !== vpnRow.modelData.uuid ? vpnRow.err : vpnRow.modelData.state === "activated" ? "Connected" : ""
                     onToggled: checked ? Net.vpnDown(vpnRow.modelData.uuid) : Net.vpnUp(vpnRow.modelData.uuid)
                 }
                 Loader {
@@ -174,11 +174,11 @@ BarButton {
                     return "…";
                 if (Net.tsRunning) {
                     const exit = Net.tsExitNodes.find(n => n.ip === Net.tsExitNode);
-                    return Net.tsIp + (exit ? " · çıkış: " + exit.name : "");
+                    return Net.tsIp + (exit ? " · exit: " + exit.name : "");
                 }
                 if (Net.tsState === "NeedsLogin")
-                    return "Giriş gerekli";
-                return Net.tsState === "" ? "Hizmet çalışmıyor" : "Kapalı";
+                    return "Login required";
+                return Net.tsState === "" ? "Service not running" : "Off";
             }
             onToggled: Net.tsRunning ? Net.tsDown() : Net.tsUp()
         }
@@ -194,7 +194,7 @@ BarButton {
         }
         MenuItem {
             visible: Net.tsAvailable && Net.tsRunning && Net.tsIp !== ""
-            text: "IP adresini kopyala"
+            text: "Copy IP address"
             secondary: Net.tsIp
             icon: "edit-copy-symbolic"
             onTriggered: {
@@ -204,16 +204,16 @@ BarButton {
         }
         MenuItem {
             visible: Net.tsAvailable && Net.tsRunning && Net.tsExitNodes.length > 0
-            text: "Çıkış düğümü"
+            text: "Exit node"
             icon: "network-server-symbolic"
-            secondary: Net.tsExitNodes.find(n => n.ip === Net.tsExitNode)?.name ?? "Yok"
+            secondary: Net.tsExitNodes.find(n => n.ip === Net.tsExitNode)?.name ?? "None"
             trailingIcon: root.showExitNodes ? "go-down-symbolic" : "go-next-symbolic"
             onTriggered: root.showExitNodes = !root.showExitNodes
         }
         Repeater {
             model: root.showExitNodes && Net.tsRunning ? [
                 {
-                    name: "Yok",
+                    name: "None",
                     ip: "",
                     online: true
                 }
@@ -223,7 +223,7 @@ BarButton {
                 required property var modelData
                 Layout.leftMargin: 24
                 text: modelData.name
-                secondary: modelData.online ? "" : "çevrimdışı"
+                secondary: modelData.online ? "" : "offline"
                 checked: modelData.ip === Net.tsExitNode
                 enabled: modelData.online && !Net.tsBusy
                 onTriggered: Net.tsSetExitNode(modelData.ip)
@@ -242,9 +242,9 @@ BarButton {
                 required property var modelData
                 readonly property string ip: root.ipOf(modelData)
                 icon: "network-wired-symbolic"
-                text: "Kablolu bağlantı" + (root.wiredDevs.length > 1 ? " (" + modelData.name + ")" : "")
+                text: "Wired" + (root.wiredDevs.length > 1 ? " (" + modelData.name + ")" : "")
                 checked: modelData.connected
-                subtitle: modelData.connected ? [ip, modelData.linkSpeed ? modelData.linkSpeed + " Mb/s" : ""].filter(s => s).join(" · ") : modelData.hasLink ? "Bağlı değil" : "Kablo takılı değil"
+                subtitle: modelData.connected ? [ip, modelData.linkSpeed ? modelData.linkSpeed + " Mb/s" : ""].filter(s => s).join(" · ") : modelData.hasLink ? "Disconnected" : "Cable unplugged"
                 actionIcon: ip !== "" ? "edit-copy-symbolic" : ""
                 onActionTriggered: Quickshell.clipboardText = ip
                 // Bağlıyken yanlışlıkla kesmemek için yalnızca bağlanır
@@ -291,7 +291,7 @@ BarButton {
                     icon: root.wifiIcon(row.modelData.signalStrength)
                     text: row.modelData.name
                     checked: row.modelData.connected
-                    subtitle: row.modelData.stateChanging ? (row.modelData.connected ? "Kesiliyor…" : "Bağlanıyor…") : row.modelData.connected ? root.ipOf(root.wifi) : ""
+                    subtitle: row.modelData.stateChanging ? (row.modelData.connected ? "Disconnecting…" : "Connecting…") : row.modelData.connected ? root.ipOf(root.wifi) : ""
                     trailingIcon: !row.modelData.known && secured ? "network-wireless-encrypted-symbolic" : ""
                     actionIcon: row.modelData.known ? "user-trash-symbolic" : ""
                     onActionTriggered: row.modelData.forget()
@@ -331,7 +331,7 @@ BarButton {
 
         MenuItem {
             visible: root.otherNets.length > 0
-            text: "Görünür ağlar"
+            text: "Visible networks"
             secondary: root.otherNets.length
             trailingIcon: root.showVisible ? "go-down-symbolic" : "go-next-symbolic"
             onTriggered: root.showVisible = !root.showVisible
@@ -344,7 +344,7 @@ BarButton {
 
         Separator {}
         MenuItem {
-            text: "Ağ ayarları…"
+            text: "Network settings…"
             onTriggered: {
                 Quickshell.execDetached(Config.settingsCommand.concat(["network"]));
                 popup.visible = false;

@@ -6,9 +6,9 @@ import qs
 ColumnLayout {
     id: root
 
-    property string placeholder: "Parola"
+    property string placeholder: "Password"
     property string error: ""
-    property string acceptText: "Bağlan"
+    property string acceptText: "Connect"
     property bool busy: false
     property alias text: input.text
 
@@ -104,7 +104,7 @@ ColumnLayout {
             Layout.fillWidth: true
         }
         TextButton {
-            text: "İptal"
+            text: "Cancel"
             onClicked: root.canceled()
         }
         TextButton {

@@ -55,7 +55,7 @@ Singleton {
     // COSMIC App List ile aynı RON biçiminde yaz; COSMIC paneli de güncellenir.
     function setFavorites(ids) {
         if (!root.favoritesReady) {
-            console.warn("Favoriler henüz okunmadı, değişiklik yok sayıldı");
+            console.warn("Favorites not loaded yet, change ignored");
             return;
         }
         root.favorites = ids;

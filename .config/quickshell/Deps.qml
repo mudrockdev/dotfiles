@@ -19,91 +19,91 @@ Singleton {
             id: "python3",
             name: "python3",
             pkg: "python3",
-            why: "Uygulama pencereleri, önizlemeler, Bluetooth eşleştirme",
+            why: "App windows, previews, Bluetooth pairing",
             test: "command -v python3"
         },
         {
             id: "python3-dbus",
-            name: "Python dbus modülü",
+            name: "Python dbus module",
             pkg: "python3-dbus",
-            why: "Bluetooth eşleştirme (PIN / kod onayı)",
+            why: "Bluetooth pairing (PIN / code confirmation)",
             test: "python3 -I -c 'import dbus, dbus.mainloop.glib, dbus.service'"
         },
         {
             id: "python3-gobject",
-            name: "Python GLib (gi) modülü",
+            name: "Python GLib (gi) module",
             pkg: "python3-gobject-base",
-            why: "Bluetooth eşleştirme (PIN / kod onayı)",
+            why: "Bluetooth pairing (PIN / code confirmation)",
             test: "python3 -I -c 'from gi.repository import GLib'"
         },
         {
             id: "nmcli",
             name: "nmcli",
             pkg: "NetworkManager",
-            why: "VPN bağlantıları, ağ değişikliklerini izleme",
+            why: "VPN connections, watching network changes",
             test: "command -v nmcli"
         },
         {
             id: "ip",
             name: "ip",
             pkg: "iproute",
-            why: "Ağ menüsündeki IP adresleri",
+            why: "IP addresses in the network menu",
             test: "command -v ip"
         },
         {
             id: "rfkill",
             name: "rfkill",
             pkg: "util-linux",
-            why: "Uçak modu",
+            why: "Airplane mode",
             test: "command -v rfkill"
         },
         {
             id: "systemd",
             name: "loginctl / systemctl",
             pkg: "systemd",
-            why: "Kilitleme ve askıya alma",
+            why: "Lock and suspend",
             test: "command -v loginctl && command -v systemctl"
         },
         {
             id: "cosmic-settings",
             name: "cosmic-settings",
             pkg: "cosmic-settings",
-            why: "Ayarlar kısayolları",
+            why: "Settings shortcuts",
             test: "command -v " + Config.settingsCommand[0]
         },
         {
             id: "cosmic-app-library",
             name: "cosmic-app-library",
             pkg: "cosmic-app-library",
-            why: "Uygulama başlatıcı düğmesi",
+            why: "App launcher button",
             test: "command -v " + Config.launcherCommand[0]
         },
         {
             id: "cosmic-osd",
             name: "cosmic-osd",
             pkg: "cosmic-osd",
-            why: "Oturumu kapat / yeniden başlat / kapat onayı",
+            why: "Log out / restart / shut down confirmation",
             test: "command -v cosmic-osd"
         },
         {
             id: "cosmic-monitor",
             name: "cosmic-monitor",
             pkg: "cosmic-monitor",
-            why: "Sistem monitörüne tıklayınca açılır",
+            why: "Opens when clicking the system monitor",
             test: "command -v " + Config.systemMonitorCommand[0]
         },
         {
             id: "icons",
-            name: iconTheme + " simge teması",
+            name: iconTheme + " icon theme",
             pkg: "mint-y-icons",
-            why: "Panel simgeleri",
+            why: "Panel icons",
             test: "root.themeTest"
         },
         {
             id: "adwaita",
-            name: "Adwaita simge teması",
+            name: "Adwaita icon theme",
             pkg: "adwaita-icon-theme",
-            why: "Bazı sembolik simgeler (uçak modu, VPN…)",
+            why: "Some symbolic icons (airplane mode, VPN…)",
             test: "root.adwaitaTest"
         }
     ]

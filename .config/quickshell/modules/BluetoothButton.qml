@@ -8,7 +8,7 @@ import qs
 import qs.components
 
 // COSMIC Bluetooth appleti: aç/kapat, eşleşmiş cihazlar (pil, bağlan/kes, unut),
-// "Diğer cihazlar" (menü açıkken tarama, eşleştirme), PIN / kod onayı.
+// "Other devices" (menü açıkken tarama, eşleştirme), PIN / kod onayı.
 BarButton {
     id: root
 
@@ -31,18 +31,18 @@ BarButton {
 
     function status(d) {
         if (BtAgent.pairing[d.dbusPath] || d.pairing)
-            return "Eşleştiriliyor…";
+            return "Pairing…";
         const err = BtAgent.errors[d.dbusPath];
         if (err)
             return err;
         switch (d.state) {
         case BluetoothDeviceState.Connecting:
-            return "Bağlanıyor…";
+            return "Connecting…";
         case BluetoothDeviceState.Disconnecting:
-            return "Kesiliyor…";
+            return "Disconnecting…";
         }
         if (d.connected)
-            return d.batteryAvailable ? "Bağlı · %" + Math.round(d.battery * 100) : "Bağlı";
+            return d.batteryAvailable ? "Connected · " + Math.round(d.battery * 100) + "%" : "Connected";
         return "";
     }
 
@@ -120,15 +120,15 @@ BarButton {
                     color: Theme.fgDim
                     text: {
                         if (prompt.req?.kind === "confirm")
-                            return "Bu kodun cihazda da göründüğünü onaylayın:";
+                            return "Confirm this code is also shown on the device:";
                         if (prompt.req?.kind === "authorize")
-                            return "Bu cihaz eşleşmek istiyor.";
+                            return "This device wants to pair.";
                         if (prompt.req?.kind === "pin")
-                            return "Cihazın PIN kodunu girin:";
+                            return "Enter the device's PIN:";
                         if (prompt.req?.kind === "passkey")
-                            return "Cihazdaki 6 haneli kodu girin:";
+                            return "Enter the 6-digit code shown on the device:";
                         if (prompt.disp)
-                            return "Cihazda bu kodu yazıp Enter'a basın:";
+                            return "Type this code on the device and press Enter:";
                         return "";
                     }
                 }
@@ -149,8 +149,8 @@ BarButton {
                     sourceComponent: PasswordField {
                         Layout.leftMargin: 0
                         Layout.rightMargin: 0
-                        placeholder: prompt.req?.kind === "pin" ? "PIN" : "Kod"
-                        acceptText: "Eşleştir"
+                        placeholder: prompt.req?.kind === "pin" ? "PIN" : "Code"
+                        acceptText: "Pair"
                         onAccepted: text => BtAgent.accept(text)
                         onCanceled: BtAgent.reject()
                     }
@@ -164,7 +164,7 @@ BarButton {
                         Layout.fillWidth: true
                     }
                     TextButton {
-                        text: prompt.req ? "İptal" : "Kapat"
+                        text: prompt.req ? "Cancel" : "Close"
                         onClicked: {
                             if (prompt.req)
                                 BtAgent.reject();
@@ -175,7 +175,7 @@ BarButton {
                     TextButton {
                         visible: prompt.req !== null
                         primary: true
-                        text: prompt.req?.kind === "authorize" ? "İzin ver" : "Onayla"
+                        text: prompt.req?.kind === "authorize" ? "Allow" : "Confirm"
                         onClicked: BtAgent.accept()
                     }
                 }
@@ -212,8 +212,8 @@ BarButton {
         }
         MenuItem {
             visible: root.enabled_
-            text: "Diğer cihazlar"
-            secondary: root.adapter?.discovering ? "Aranıyor…" : root.others.length > 0 ? root.others.length : ""
+            text: "Other devices"
+            secondary: root.adapter?.discovering ? "Searching…" : root.others.length > 0 ? root.others.length : ""
             trailingIcon: root.showOthers ? "go-down-symbolic" : "go-next-symbolic"
             onTriggered: root.showOthers = !root.showOthers
         }
@@ -235,7 +235,7 @@ BarButton {
 
         Separator {}
         MenuItem {
-            text: "Bluetooth ayarları…"
+            text: "Bluetooth settings…"
             onTriggered: {
                 Quickshell.execDetached(Config.settingsCommand.concat(["bluetooth"]));
                 popup.visible = false;

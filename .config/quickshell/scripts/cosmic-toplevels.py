@@ -99,7 +99,7 @@ class Wayland:
     def read(self):
         data = self.sock.recv(65536)
         if not data:
-            raise ConnectionError("compositor bağlantıyı kapattı")
+            raise ConnectionError("compositor closed the connection")
         self.buf += data
         msgs = []
         while len(self.buf) >= 8:
@@ -179,9 +179,9 @@ class Toplevels:
                 else:
                     self.dispatch(obj, op, p)
         if "ext_foreign_toplevel_list_v1" not in self.globals or "zcosmic_toplevel_info_v1" not in self.globals:
-            sys.exit("ext_foreign_toplevel_list_v1 / zcosmic_toplevel_info_v1 bulunamadı (COSMIC değil mi?)")
+            sys.exit("ext_foreign_toplevel_list_v1 / zcosmic_toplevel_info_v1 not found (not COSMIC?)")
         if self.globals["zcosmic_toplevel_info_v1"][1] < 2:
-            sys.exit("zcosmic_toplevel_info_v1 sürümü < 2")
+            sys.exit("zcosmic_toplevel_info_v1 version < 2")
         self.info = self.bind("zcosmic_toplevel_info_v1", 3)
         self.mgr = self.bind("zcosmic_toplevel_manager_v1", 4)
         self.seat = self.bind("wl_seat", 1)
@@ -197,7 +197,7 @@ class Toplevels:
                 oid, off = get_uint(p, 0)
                 code, off = get_uint(p, off)
                 msg, _ = get_string(p, off)
-                sys.exit(f"wayland hatası: nesne {oid} kod {code}: {msg}")
+                sys.exit(f"wayland error: object {oid} code {code}: {msg}")
             return
         if obj == self.registry:
             if op == WL_REGISTRY_EV_GLOBAL:

@@ -88,7 +88,7 @@ Singleton {
                 } else if (ev.type === "paired") {
                     root.setMap("pairing", ev.device, undefined);
                     if (!ev.ok)
-                        root.setMap("errors", ev.device, (ev.error || "Eşleştirilemedi").trim());
+                        root.setMap("errors", ev.device, (ev.error || "Pairing failed").trim());
                     if (root.display?.device === ev.device)
                         root.display = null;
                     if (root.request?.device === ev.device)

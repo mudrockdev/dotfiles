@@ -49,7 +49,7 @@ Singleton {
                         root.previews = p;
                     }
                 } catch (e) {
-                    console.warn("cosmic-toplevels: geçersiz çıktı:", data);
+                    console.warn("cosmic-toplevels: invalid output:", data);
                 }
             }
         }

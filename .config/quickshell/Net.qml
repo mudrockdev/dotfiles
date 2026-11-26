@@ -106,7 +106,7 @@ Singleton {
         run(["tailscale"].concat(args), (code, out, err) => {
             root.tsBusy = false;
             if (code !== 0)
-                root.tsError = /access denied|checkprefs|operator/i.test(err) ? "İzin yok. Bir kez çalıştırın: sudo tailscale set --operator=$USER" : root.cleanError(err || out);
+                root.tsError = /access denied|checkprefs|operator/i.test(err) ? "Permission denied. Run once: sudo tailscale set --operator=$USER" : root.cleanError(err || out);
             root.refreshTailscale();
         });
     }
