@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Wayland
 import qs
 import qs.components
 
@@ -51,7 +50,7 @@ RowLayout {
     readonly property var otherItems: {
         const out = [];
         const all = root.pinnedItems.slice();
-        for (const tl of ToplevelManager.toplevels.values) {
+        for (const tl of Toplevels.list) {
             if (!tl.appId)
                 continue;
             if (all.some(o => root.matches(tl, o.key, root.entryFor(o.key))))
@@ -100,7 +99,7 @@ RowLayout {
             required property var modelData
             readonly property string key: modelData.key
             readonly property var entry: root.entryFor(key)
-            readonly property var windows: ToplevelManager.toplevels.values.filter(t => root.matches(t, btn.key, btn.entry))
+            readonly property var windows: Toplevels.list.filter(t => root.matches(t, btn.key, btn.entry))
             readonly property bool focused: windows.some(w => w.activated)
 
             hPadding: 3
@@ -122,15 +121,16 @@ RowLayout {
                 } else if (windows.length === 0) {
                     root.launch(key, entry);
                 } else if (windows.length === 1) {
+                    // COSMIC gibi: odaktaysa küçült, değilse (küçültülmüş olsa bile) geri getir
                     const w = windows[0];
                     if (w.activated)
-                        w.minimized = true;
+                        Toplevels.minimize(w);
                     else
-                        w.activate();
+                        Toplevels.activate(w);
                 } else {
                     // birden fazla pencere: sıradakine geç
                     const i = windows.findIndex(w => w.activated);
-                    windows[(i + 1) % windows.length].activate();
+                    Toplevels.activate(windows[(i + 1) % windows.length]);
                 }
             }
         }
@@ -156,7 +156,7 @@ RowLayout {
                 text: modelData.title || modelData.appId
                 checked: modelData.activated
                 onTriggered: {
-                    modelData.activate();
+                    Toplevels.activate(modelData);
                     menu.visible = false;
                 }
             }
@@ -194,7 +194,7 @@ RowLayout {
             icon: "window-close-symbolic"
             onTriggered: {
                 for (const w of menu.target.windows)
-                    w.close();
+                    Toplevels.close(w);
                 menu.visible = false;
             }
         }
