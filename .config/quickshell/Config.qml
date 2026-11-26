@@ -37,23 +37,51 @@ Singleton {
 
     // --- Favoriler ---
     readonly property string cosmicFavoritesPath: Quickshell.env("HOME") + "/.config/cosmic/com.system76.CosmicAppList/v1/favorites"
+    // Yalnızca COSMIC favori dosyası yoksa kullanılır.
     readonly property var fallbackFavorites: ["firefox", "org.gnome.Nautilus", "com.system76.CosmicSettings"]
     property var favorites: fallbackFavorites
+    // Dosya okunmadan yazmak gerçek favorileri silebilir; okunana kadar yazma yok.
+    property bool favoritesReady: false
+
+    function parseFavorites(text) {
+        const ids = [];
+        const re = /"((?:[^"\\]|\\.)*)"/g;
+        let m;
+        while ((m = re.exec(text)) !== null)
+            ids.push(m[1].replace(/\\(.)/g, "$1"));
+        return ids;
+    }
+
+    // COSMIC App List ile aynı RON biçiminde yaz; COSMIC paneli de güncellenir.
+    function setFavorites(ids) {
+        if (!root.favoritesReady) {
+            console.warn("Favoriler henüz okunmadı, değişiklik yok sayıldı");
+            return;
+        }
+        root.favorites = ids;
+        const esc = s => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+        favFile.setText("[\n" + ids.map(i => '    "' + esc(i) + '",').join("\n") + "\n]");
+    }
+    function pin(id) {
+        if (!root.favorites.includes(id))
+            setFavorites(root.favorites.concat([id]));
+    }
+    function unpin(id) {
+        setFavorites(root.favorites.filter(f => f !== id));
+    }
 
     FileView {
+        id: favFile
         path: root.cosmicFavoritesPath
+        atomicWrites: false
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
         onLoaded: {
-            const ids = [];
-            const re = /"([^"]+)"/g;
-            let m;
-            const t = text();
-            while ((m = re.exec(t)) !== null)
-                ids.push(m[1]);
-            if (ids.length > 0)
-                root.favorites = ids;
+            root.favorites = root.parseFavorites(text());
+            root.favoritesReady = true;
         }
+        // Dosya yoksa (COSMIC dışı) yedek liste ile başla; ilk sabitlemede oluşturulur.
+        onLoadFailed: root.favoritesReady = true
     }
 }

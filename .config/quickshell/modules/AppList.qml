@@ -43,7 +43,8 @@ RowLayout {
     }
 
     readonly property var pinnedItems: Config.favorites.map(f => ({
-                key: f
+                key: f,
+                pinned: true
             }))
 
     // favorilerde olmayan açık uygulamalar
@@ -56,7 +57,8 @@ RowLayout {
             if (all.some(o => root.matches(tl, o.key, root.entryFor(o.key))))
                 continue;
             const item = {
-                key: tl.appId
+                key: tl.appId,
+                pinned: false
             };
             all.push(item);
             out.push(item);
@@ -98,6 +100,7 @@ RowLayout {
 
             required property var modelData
             readonly property string key: modelData.key
+            readonly property bool pinned: modelData.pinned
             readonly property var entry: root.entryFor(key)
             readonly property var windows: Toplevels.list.filter(t => root.matches(t, btn.key, btn.entry))
             readonly property bool focused: windows.some(w => w.activated)
@@ -116,6 +119,7 @@ RowLayout {
                 if (mouse.button === Qt.MiddleButton) {
                     root.launch(key, entry);
                 } else if (mouse.button === Qt.RightButton) {
+                    picker.visible = false;
                     menu.target = btn;
                     menu.visible = true;
                 } else if (windows.length === 0) {
@@ -128,9 +132,16 @@ RowLayout {
                     else
                         Toplevels.activate(w);
                 } else {
-                    // birden fazla pencere: sıradakine geç
-                    const i = windows.findIndex(w => w.activated);
-                    Toplevels.activate(windows[(i + 1) % windows.length]);
+                    // birden fazla pencere: önizlemeli pencere seçici
+                    menu.visible = false;
+                    if (picker.visible && picker.target === btn) {
+                        picker.visible = false;
+                    } else {
+                        picker.target = btn;
+                        for (const w of windows)
+                            Toplevels.capture(w);
+                        picker.visible = true;
+                    }
                 }
             }
         }
@@ -188,6 +199,30 @@ RowLayout {
             }
         }
 
+        Separator {}
+
+        MenuItem {
+            visible: menu.target?.pinned ?? false
+            text: "Başlatıcılardan kaldır"
+            icon: "view-pin-symbolic"
+            onTriggered: {
+                const key = menu.target.key;
+                menu.visible = false;
+                Config.unpin(key);
+            }
+        }
+
+        MenuItem {
+            visible: !(menu.target?.pinned ?? true)
+            text: "Başlatıcılara sabitle"
+            icon: "view-pin-symbolic"
+            onTriggered: {
+                const key = menu.target.key;
+                menu.visible = false;
+                Config.pin(key);
+            }
+        }
+
         MenuItem {
             visible: (menu.target?.windows.length ?? 0) > 0
             text: menu.target?.windows.length > 1 ? "Tümünü kapat" : "Kapat"
@@ -196,6 +231,92 @@ RowLayout {
                 for (const w of menu.target.windows)
                     Toplevels.close(w);
                 menu.visible = false;
+            }
+        }
+    }
+
+    // Birden fazla pencere varken sol tık: önizlemeli pencere seçici (COSMIC gibi)
+    Popup {
+        id: picker
+
+        property var target: null
+
+        anchorItem: target ?? root
+        maxWidth: 1800
+        minWidth: 0
+        padding: 8
+
+        RowLayout {
+            spacing: 6
+
+            Repeater {
+                model: picker.target?.windows ?? []
+
+                delegate: Rectangle {
+                    id: card
+
+                    required property var modelData
+                    readonly property string preview: Toplevels.previews[modelData.id] ?? ""
+
+                    implicitWidth: 220
+                    implicitHeight: 160
+                    radius: 8
+                    color: cardMa.pressed ? Theme.pressed : cardMa.containsMouse ? Theme.hover : "transparent"
+                    border.width: modelData.activated ? 1 : 0
+                    border.color: Theme.accent
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        spacing: 6
+
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+
+                            Image {
+                                id: thumb
+                                anchors.fill: parent
+                                source: card.preview
+                                fillMode: Image.PreserveAspectFit
+                                asynchronous: true
+                                cache: false
+                                visible: status === Image.Ready
+                                opacity: card.modelData.minimized ? 0.6 : 1
+                            }
+                            Icon {
+                                anchors.centerIn: parent
+                                visible: !thumb.visible
+                                size: 48
+                                colorize: false
+                                icon: picker.target?.entry?.icon ?? card.modelData.appId
+                                fallback: "application-x-executable"
+                            }
+                        }
+
+                        Label {
+                            Layout.fillWidth: true
+                            horizontalAlignment: Text.AlignHCenter
+                            text: card.modelData.title || card.modelData.appId
+                        }
+                    }
+
+                    MouseArea {
+                        id: cardMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: mouse => {
+                            if (mouse.button === Qt.MiddleButton) {
+                                Toplevels.close(card.modelData);
+                            } else {
+                                Toplevels.activate(card.modelData);
+                                picker.visible = false;
+                            }
+                        }
+                    }
+                }
             }
         }
     }

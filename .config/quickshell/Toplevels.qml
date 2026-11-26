@@ -12,6 +12,15 @@ Singleton {
 
     // [{ id, appId, title, activated, minimized, maximized, fullscreen }]
     property var list: []
+    // pencere id -> önizleme görüntüsü URL'si
+    property var previews: ({})
+
+    readonly property string previewDir: Quickshell.env("XDG_RUNTIME_DIR") + "/quickshell-previews"
+
+    // Pencerenin küçük bir önizlemesini yakalat (sonuç previews[id] içine gelir).
+    function capture(t) {
+        proc.write("capture " + t.id + " " + previewDir + "/" + t.id + ".ppm 480 270\n");
+    }
 
     function activate(t) {
         proc.write("activate " + t.id + "\n");
@@ -31,7 +40,14 @@ Singleton {
         stdout: SplitParser {
             onRead: data => {
                 try {
-                    root.list = JSON.parse(data);
+                    const msg = JSON.parse(data);
+                    if (msg.type === "toplevels") {
+                        root.list = msg.list;
+                    } else if (msg.type === "preview" && msg.ok) {
+                        const p = Object.assign({}, root.previews);
+                        p[msg.id] = "file://" + msg.path + "?" + Date.now();
+                        root.previews = p;
+                    }
                 } catch (e) {
                     console.warn("cosmic-toplevels: geçersiz çıktı:", data);
                 }
