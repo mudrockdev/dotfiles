@@ -1,0 +1,24 @@
+[Unit]
+Description=Quickshell panel
+Documentation=https://quickshell.org
+# Start with the graphical session (COSMIC brings up graphical-session.target)
+# and stop together with it.
+PartOf=graphical-session.target
+After=graphical-session.target
+Requisite=graphical-session.target
+# Give up if it keeps crashing right after start (5 times within 60 s)
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/qs -p %h/.config/quickshell
+# Restart on crashes; a clean exit (e.g. `qs kill`) stays stopped
+Restart=on-failure
+RestartSec=2
+Slice=app-graphical.slice
+# COSMIC sets this for apps it launches but not in the systemd environment
+Environment=QT_QPA_PLATFORMTHEME=cosmic
+
+[Install]
+WantedBy=graphical-session.target
