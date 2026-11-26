@@ -52,9 +52,7 @@ PanelWindow {
             Layout.rightMargin: 4
         }
         Keyboard {}
-        Tray {
-            panel: bar
-        }
+        Tray {}
         Media {}
         Audio {}
         BluetoothButton {}

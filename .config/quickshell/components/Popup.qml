@@ -11,6 +11,7 @@ PopupWindow {
     property int padding: 12
     property int minWidth: 240
     property int maxWidth: 380
+    property alias spacing: layout.spacing
     default property alias content: layout.data
 
     function toggle() {
