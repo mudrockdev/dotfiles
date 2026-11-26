@@ -4,7 +4,6 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Services.Pipewire
-import Quickshell.Services.Mpris
 import qs
 import qs.components
 
@@ -16,6 +15,11 @@ BarButton {
     readonly property PwNode source: Pipewire.defaultAudioSource
     readonly property real volume: sink?.audio?.volume ?? 0
     readonly property bool muted: sink?.audio?.muted ?? true
+    readonly property real micVolume: source?.audio?.volume ?? 0
+    readonly property bool micMuted: source?.audio?.muted ?? true
+
+    readonly property var sinks: Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && n.audio)
+    readonly property var sources: Pipewire.nodes.values.filter(n => !n.isSink && !n.isStream && n.audio && !n.name.endsWith(".monitor"))
 
     function volumeIcon(vol, isMuted) {
         if (isMuted || vol <= 0.001)
@@ -27,15 +31,20 @@ BarButton {
         return "audio-volume-high-symbolic";
     }
 
-    function setVolume(node, v) {
+    function setVolume(node, v, max) {
         if (node?.audio) {
             node.audio.muted = false;
-            node.audio.volume = Math.max(0, Math.min(1, v));
+            node.audio.volume = Math.max(0, Math.min(max, v));
         }
     }
 
+    function toggleMute(node) {
+        if (node?.audio)
+            node.audio.muted = !node.audio.muted;
+    }
+
     PwObjectTracker {
-        objects: [root.sink, root.source]
+        objects: root.sinks.concat(root.sources)
     }
 
     Icon {
@@ -43,133 +52,100 @@ BarButton {
     }
 
     onClicked: mouse => {
-        if (mouse.button === Qt.MiddleButton) {
-            if (sink?.audio)
-                sink.audio.muted = !sink.audio.muted;
-        } else {
+        if (mouse.button === Qt.MiddleButton)
+            toggleMute(sink);
+        else
             popup.toggle();
-        }
     }
-    onScrolled: wheel => setVolume(sink, volume + (wheel.angleDelta.y > 0 ? 0.05 : -0.05))
+    onScrolled: wheel => setVolume(sink, volume + (wheel.angleDelta.y > 0 ? 0.05 : -0.05), 1.0)
 
     Popup {
         id: popup
         anchorItem: root
-        minWidth: 320
+        minWidth: 360
+        maxWidth: 400
 
-        readonly property var player: {
-            const ps = Mpris.players.values;
-            return ps.find(p => p.isPlaying) ?? ps.find(p => p.canControl) ?? null;
-        }
-
-        // Çalan medya
-        RowLayout {
-            visible: popup.player !== null
-            Layout.fillWidth: true
-            Layout.leftMargin: 8
-            spacing: 10
-
-            Image {
-                visible: source != ""
-                source: popup.player?.trackArtUrl ?? ""
-                Layout.preferredWidth: 40
-                Layout.preferredHeight: 40
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
-            }
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 0
-                Label {
-                    Layout.fillWidth: true
-                    text: popup.player?.trackTitle || popup.player?.identity || ""
-                    font.bold: true
-                }
-                Label {
-                    Layout.fillWidth: true
-                    text: popup.player?.trackArtist ?? ""
-                    color: Theme.fgDim
-                    visible: text !== ""
-                }
-            }
-        }
-        Separator {
-            visible: popup.player !== null
-        }
-
-        // Çıkış
-        SectionTitle {
-            text: "Çıkış"
-        }
+        // Çıkış ses seviyesi
         RowLayout {
             Layout.fillWidth: true
-            Layout.leftMargin: 4
             spacing: 8
             BarButton {
                 Icon {
                     icon: root.volumeIcon(root.volume, root.muted)
+                    size: 20
                 }
-                onClicked: if (root.sink?.audio)
-                    root.sink.audio.muted = !root.sink.audio.muted
+                onClicked: root.toggleMute(root.sink)
             }
             Slider {
                 value: root.muted ? 0 : root.volume
-                onMoved: v => root.setVolume(root.sink, v)
+                to: Math.max(1.0, root.volume)
+                onMoved: v => root.setVolume(root.sink, v, 1.5)
             }
             Label {
                 Layout.preferredWidth: 36
                 horizontalAlignment: Text.AlignRight
-                text: Math.round(root.volume * 100) + "%"
+                text: Math.round(root.volume * 100)
+                font.pixelSize: Theme.fontSize + 2
             }
         }
-        Repeater {
-            model: Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && n.audio)
-            delegate: MenuItem {
-                required property PwNode modelData
-                text: modelData.description || modelData.nickname || modelData.name
-                checked: Pipewire.defaultAudioSink === modelData
-                onTriggered: Pipewire.preferredDefaultAudioSink = modelData
+
+        // Mikrofon ses seviyesi (%150'ye kadar, %100'de işaret)
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            BarButton {
+                Icon {
+                    icon: root.micMuted ? "microphone-sensitivity-muted-symbolic" : "audio-input-microphone-symbolic"
+                    size: 20
+                }
+                onClicked: root.toggleMute(root.source)
+            }
+            Slider {
+                value: root.micMuted ? 0 : root.micVolume
+                to: 1.5
+                mark: 1.0
+                onMoved: v => root.setVolume(root.source, v, 1.5)
+            }
+            Label {
+                Layout.preferredWidth: 36
+                horizontalAlignment: Text.AlignRight
+                text: Math.round(root.micVolume * 100)
+                font.pixelSize: Theme.fontSize + 2
             }
         }
 
         Separator {}
 
-        // Giriş
-        SectionTitle {
-            text: "Giriş"
+        DeviceSection {
+            title: "Çıkış"
+            nodes: root.sinks
+            current: root.sink
+            onSelected: node => Pipewire.preferredDefaultAudioSink = node
         }
-        RowLayout {
-            id: micRow
-            Layout.fillWidth: true
-            Layout.leftMargin: 4
-            spacing: 8
-            readonly property real micVol: root.source?.audio?.volume ?? 0
-            readonly property bool micMuted: root.source?.audio?.muted ?? true
-            BarButton {
-                Icon {
-                    icon: micRow.micMuted ? "microphone-sensitivity-muted-symbolic" : "audio-input-microphone-symbolic"
-                }
-                onClicked: if (root.source?.audio)
-                    root.source.audio.muted = !root.source.audio.muted
-            }
-            Slider {
-                value: micRow.micMuted ? 0 : micRow.micVol
-                onMoved: v => root.setVolume(root.source, v)
-            }
-            Label {
-                Layout.preferredWidth: 36
-                horizontalAlignment: Text.AlignRight
-                text: Math.round(micRow.micVol * 100) + "%"
-            }
+        DeviceSection {
+            title: "Giriş"
+            nodes: root.sources
+            current: root.source
+            onSelected: node => Pipewire.preferredDefaultAudioSource = node
+        }
+
+        // Medya kaynakları
+        Separator {
+            visible: Players.list.length > 0
         }
         Repeater {
-            model: Pipewire.nodes.values.filter(n => !n.isSink && !n.isStream && n.audio && n.name.startsWith("alsa_input"))
-            delegate: MenuItem {
-                required property PwNode modelData
-                text: modelData.description || modelData.nickname || modelData.name
-                checked: Pipewire.defaultAudioSource === modelData
-                onTriggered: Pipewire.preferredDefaultAudioSource = modelData
+            model: Players.list
+            delegate: PlayerRow {
+                required property var modelData
+                player: modelData
             }
+        }
+
+        Separator {}
+        Toggle {
+            text: "Panelde medya kontrollerini göster"
+            checked: Settings.showMediaControls
+            onToggled: Settings.showMediaControls = !Settings.showMediaControls
         }
 
         Separator {}

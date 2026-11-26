@@ -116,12 +116,17 @@ RowLayout {
             }
 
             onClicked: mouse => {
-                if (mouse.button === Qt.MiddleButton) {
-                    root.launch(key, entry);
-                } else if (mouse.button === Qt.RightButton) {
-                    picker.visible = false;
+                // Bu basış açık bir popup'ı kapattıysa tıklama sadece onu kapatır;
+                // sağ tık ise her zaman (yeniden) bağlam menüsünü açar.
+                const closedPopup = Popups.justClosed !== null;
+                Popups.justClosed = null;
+                if (mouse.button === Qt.RightButton) {
                     menu.target = btn;
                     menu.visible = true;
+                } else if (closedPopup) {
+                    return;
+                } else if (mouse.button === Qt.MiddleButton) {
+                    root.launch(key, entry);
                 } else if (windows.length === 0) {
                     root.launch(key, entry);
                 } else if (windows.length === 1) {
@@ -133,15 +138,10 @@ RowLayout {
                         Toplevels.activate(w);
                 } else {
                     // birden fazla pencere: önizlemeli pencere seçici
-                    menu.visible = false;
-                    if (picker.visible && picker.target === btn) {
-                        picker.visible = false;
-                    } else {
-                        picker.target = btn;
-                        for (const w of windows)
-                            Toplevels.capture(w);
-                        picker.visible = true;
-                    }
+                    picker.target = btn;
+                    for (const w of windows)
+                        Toplevels.capture(w);
+                    picker.visible = true;
                 }
             }
         }

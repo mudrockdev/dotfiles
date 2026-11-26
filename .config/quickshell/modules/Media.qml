@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Services.Mpris
 import qs
 import qs.components
 
@@ -9,12 +8,9 @@ import qs.components
 RowLayout {
     id: root
 
-    readonly property var player: {
-        const ps = Mpris.players.values;
-        return ps.find(p => p.isPlaying) ?? ps.find(p => p.canControl) ?? null;
-    }
+    readonly property var player: Players.active
 
-    visible: player !== null
+    visible: Settings.showMediaControls && player !== null
     spacing: 0
 
     BarButton {
@@ -26,10 +22,12 @@ RowLayout {
         onClicked: root.player.previous()
     }
     BarButton {
+        enabled: Players.canToggle(root.player)
+        opacity: enabled ? 1 : 0.4
         Icon {
             icon: root.player?.isPlaying ? "media-playback-pause-symbolic" : "media-playback-start-symbolic"
         }
-        onClicked: root.player.togglePlaying()
+        onClicked: Players.toggle(root.player)
     }
     BarButton {
         enabled: root.player?.canGoNext ?? false

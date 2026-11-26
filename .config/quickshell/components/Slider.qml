@@ -2,31 +2,36 @@ import QtQuick
 import QtQuick.Layouts
 import qs
 
-// Basit yatay kaydırıcı (0..1).
+// Yatay kaydırıcı: 0..to aralığı, isteğe bağlı işaret çizgisi (ör. %100).
 Item {
     id: root
 
     property real value: 0
+    property real to: 1.0
+    property real mark: -1
+    property real step: 0.05
+    readonly property real ratio: Math.max(0, Math.min(1, value / to))
+
     signal moved(real value)
 
     Layout.fillWidth: true
     implicitWidth: 160
-    implicitHeight: 20
+    implicitHeight: 24
 
-    function setFromX(x) {
-        root.moved(Math.max(0, Math.min(1, x / width)));
+    function emitRatio(r) {
+        root.moved(Math.max(0, Math.min(1, r)) * to);
     }
 
     Rectangle {
-        id: track
         anchors.verticalCenter: parent.verticalCenter
-        width: parent.width
+        x: 7
+        width: parent.width - 14
         height: 4
         radius: 2
         color: Qt.rgba(1, 1, 1, 0.2)
 
         Rectangle {
-            width: parent.width * Math.min(1, root.value)
+            width: parent.width * root.ratio
             height: parent.height
             radius: 2
             color: Theme.accent
@@ -34,22 +39,31 @@ Item {
     }
 
     Rectangle {
-        width: 14
-        height: 14
-        radius: 7
+        visible: root.mark > 0 && root.mark < root.to
+        x: 7 + (root.width - 14) * root.mark / root.to
+        y: parent.height / 2 + 6
+        width: 1
+        height: 5
+        color: Theme.fgDim
+    }
+
+    Rectangle {
+        width: 16
+        height: 16
+        radius: 3
         anchors.verticalCenter: parent.verticalCenter
-        x: Math.min(1, root.value) * (root.width - width)
-        color: "white"
+        x: root.ratio * (root.width - width)
+        color: Theme.accent
     }
 
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onPressed: mouse => root.setFromX(mouse.x)
+        onPressed: mouse => root.emitRatio((mouse.x - 7) / (width - 14))
         onPositionChanged: mouse => {
             if (pressed)
-                root.setFromX(mouse.x);
+                root.emitRatio((mouse.x - 7) / (width - 14));
         }
-        onWheel: wheel => root.moved(Math.max(0, Math.min(1, root.value + (wheel.angleDelta.y > 0 ? 0.05 : -0.05))))
+        onWheel: wheel => root.moved(Math.max(0, Math.min(root.to, root.value + (wheel.angleDelta.y > 0 ? root.step : -root.step))))
     }
 }

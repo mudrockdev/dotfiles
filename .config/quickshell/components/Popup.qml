@@ -14,7 +14,22 @@ PopupWindow {
     default property alias content: layout.data
 
     function toggle() {
+        if (Popups.justClosed === root) {
+            // bu basışta zaten kapandı; yeniden açma
+            Popups.justClosed = null;
+            return;
+        }
         visible = !visible;
+    }
+
+    onVisibleChanged: {
+        if (visible) {
+            if (Popups.current && Popups.current !== root)
+                Popups.current.visible = false;
+            Popups.current = root;
+        } else if (Popups.current === root) {
+            Popups.current = null;
+        }
     }
 
     anchor.item: anchorItem
@@ -29,6 +44,7 @@ PopupWindow {
     implicitHeight: layout.implicitHeight + padding * 2 + 4
 
     Rectangle {
+        objectName: "popupContent"
         anchors.fill: parent
         anchors.topMargin: 4
         color: Theme.popupBg

@@ -13,6 +13,14 @@ Rectangle {
     readonly property alias hovered: ma.containsMouse
     default property alias content: row.data
 
+    // Popup içindeki butonlar açık popup'ı kapatmamalı
+    function insidePopup() {
+        for (let p = root.parent; p; p = p.parent)
+            if (p.objectName === "popupContent")
+                return true;
+        return false;
+    }
+
     signal clicked(var mouse)
     signal scrolled(var wheel)
 
@@ -55,6 +63,10 @@ Rectangle {
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         cursorShape: Qt.PointingHandCursor
+        onPressed: {
+            if (!root.insidePopup())
+                Popups.closeCurrent();
+        }
         onClicked: mouse => root.clicked(mouse)
         onWheel: wheel => root.scrolled(wheel)
     }

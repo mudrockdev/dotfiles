@@ -41,17 +41,14 @@ BarButton {
         icon: root.iconName
     }
 
-    onClicked: {
-        if (!popup.visible && root.wifi && Networking.wifiEnabled)
-            root.wifi.scannerEnabled = true;
-        popup.toggle();
-    }
+    onClicked: popup.toggle()
 
+    // Wi-Fi taraması yalnızca menü açıkken
     Connections {
         target: popup
         function onVisibleChanged() {
-            if (!popup.visible && root.wifi)
-                root.wifi.scannerEnabled = false;
+            if (root.wifi)
+                root.wifi.scannerEnabled = popup.visible && Networking.wifiEnabled;
         }
     }
 
