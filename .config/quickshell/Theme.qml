@@ -26,7 +26,40 @@ Singleton {
     readonly property color netUp: "#4cd964"
 
     readonly property int fontSize: 12
-    readonly property int radius: 6
+
+    // COSMIC köşe yarıçapları (Ayarlar > Masaüstü > Görünüm > Stil).
+    // Varsayılanlar COSMIC "yuvarlak" stilidir; dosyadan okunur.
+    property real radiusXs: 4
+    property real radiusS: 8
+    property real radiusM: 16
+    property real radiusL: 32
+    property real radiusXl: 160
+    // Kullanım: popup = M, menü satırı / panel butonu = S, küçük öğeler = Xs, anahtar = Xl
+    readonly property real radius: radiusS
+
+    // Yarıçapı boyuta göre sınırla (ör. 160 -> tam yuvarlak)
+    function r(radius, height) {
+        return Math.min(radius, height / 2);
+    }
+
+    FileView {
+        path: Quickshell.env("HOME") + "/.config/cosmic/com.system76.CosmicTheme.Dark/v1/corner_radii"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            const t = text();
+            const get = name => {
+                const m = new RegExp(name + ":\\s*\\(\\s*([\\d.]+)").exec(t);
+                return m ? parseFloat(m[1]) : undefined;
+            };
+            root.radiusXs = get("radius_xs") ?? root.radiusXs;
+            root.radiusS = get("radius_s") ?? root.radiusS;
+            root.radiusM = get("radius_m") ?? root.radiusM;
+            root.radiusL = get("radius_l") ?? root.radiusL;
+            root.radiusXl = get("radius_xl") ?? root.radiusXl;
+        }
+    }
 
     FileView {
         path: Quickshell.env("HOME") + "/.config/cosmic/com.system76.CosmicTheme.Dark.Builder/v1/accent"

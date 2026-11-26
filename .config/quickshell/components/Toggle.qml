@@ -8,13 +8,15 @@ Rectangle {
 
     property string text: ""
     property string icon: ""
+    property string subtitle: ""
+    property bool bold: true
     property bool checked: false
 
     signal toggled
 
     Layout.fillWidth: true
     implicitWidth: rowL.implicitWidth + 16
-    implicitHeight: 32
+    implicitHeight: subtitle !== "" ? 38 : 30
     radius: Theme.radius
     color: ma.containsMouse ? Theme.hover : "transparent"
 
@@ -29,21 +31,32 @@ Rectangle {
             visible: root.icon !== ""
             icon: root.icon
         }
-        Label {
+        ColumnLayout {
             Layout.fillWidth: true
-            text: root.text
-            font.bold: true
+            spacing: 0
+            Label {
+                Layout.fillWidth: true
+                text: root.text
+                font.bold: root.bold
+            }
+            Label {
+                Layout.fillWidth: true
+                visible: root.subtitle !== ""
+                text: root.subtitle
+                color: Theme.fgDim
+                font.pixelSize: Theme.fontSize - 1
+            }
         }
         Rectangle {
             implicitWidth: 34
             implicitHeight: 18
-            radius: 9
+            radius: Theme.r(Theme.radiusXl, height)
             color: root.checked ? Theme.accent : Qt.rgba(1, 1, 1, 0.2)
 
             Rectangle {
                 width: 14
                 height: 14
-                radius: 7
+                radius: Theme.r(Theme.radiusXl, height)
                 y: 2
                 x: root.checked ? parent.width - width - 2 : 2
                 color: "white"

@@ -64,6 +64,8 @@ BarButton {
         anchorItem: root
         minWidth: 360
         maxWidth: 400
+        padding: 8
+        spacing: 4
 
         // Çıkış ses seviyesi
         RowLayout {

@@ -265,7 +265,7 @@ RowLayout {
 
                     implicitWidth: 220
                     implicitHeight: 160
-                    radius: 8
+                    radius: Theme.radiusS
                     color: cardMa.pressed ? Theme.pressed : cardMa.containsMouse ? Theme.hover : "transparent"
                     border.width: modelData.activated ? 1 : 0
                     border.color: Theme.accent
@@ -333,7 +333,7 @@ RowLayout {
                         anchors.margins: 4
                         width: 24
                         height: 24
-                        radius: 12
+                        radius: Theme.r(Theme.radiusXl, height)
                         visible: cardHover.hovered
                         color: closeMa.pressed ? Qt.darker(Theme.accent, 1.2) : closeMa.containsMouse ? Theme.accent : Qt.rgba(0, 0, 0, 0.65)
 

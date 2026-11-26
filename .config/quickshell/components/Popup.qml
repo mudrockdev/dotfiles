@@ -8,8 +8,8 @@ PopupWindow {
     id: root
 
     property Item anchorItem
-    property int padding: 12
-    property int minWidth: 240
+    property int padding: 6
+    property int minWidth: 220
     property int maxWidth: 380
     property alias spacing: layout.spacing
     default property alias content: layout.data
@@ -49,7 +49,7 @@ PopupWindow {
         anchors.fill: parent
         anchors.topMargin: 4
         color: Theme.popupBg
-        radius: 10
+        radius: Theme.radiusM
         border.color: Theme.border
         border.width: 1
 
@@ -57,7 +57,7 @@ PopupWindow {
             id: layout
             anchors.fill: parent
             anchors.margins: root.padding
-            spacing: 6
+            spacing: 0
         }
     }
 }

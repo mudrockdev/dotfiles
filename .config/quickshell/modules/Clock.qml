@@ -41,6 +41,8 @@ BarButton {
 
         anchorItem: root
         minWidth: 270
+        padding: 10
+        spacing: 6
 
         Label {
             Layout.fillWidth: true
@@ -103,7 +105,7 @@ BarButton {
                     anchors.centerIn: parent
                     width: 26
                     height: 26
-                    radius: 13
+                    radius: Theme.r(Theme.radiusXl, height)
                     color: day.model.today ? Theme.accent : "transparent"
                 }
                 Label {

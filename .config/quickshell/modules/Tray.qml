@@ -129,7 +129,7 @@ RowLayout {
                 readonly property bool sep: modelData.isSeparator
 
                 Layout.fillWidth: true
-                implicitHeight: sep ? 9 : 30
+                implicitHeight: sep ? 7 : 26
                 implicitWidth: sep ? 0 : row.implicitWidth + 16
 
                 Rectangle {
@@ -162,7 +162,7 @@ RowLayout {
 
                             Rectangle {
                                 anchors.fill: parent
-                                radius: entry.modelData.buttonType === QsMenuButtonType.RadioButton ? 8 : 3
+                                radius: entry.modelData.buttonType === QsMenuButtonType.RadioButton ? 8 : Theme.r(Theme.radiusXs, 16)
                                 color: entry.modelData.checkState === Qt.Checked ? Theme.accent : "transparent"
                                 border.width: entry.modelData.checkState === Qt.Checked ? 0 : 1
                                 border.color: Theme.fgDim

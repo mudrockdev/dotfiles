@@ -27,13 +27,13 @@ Item {
         x: 7
         width: parent.width - 14
         height: 4
-        radius: 2
+        radius: Theme.r(Theme.radiusXs, height)
         color: Qt.rgba(1, 1, 1, 0.2)
 
         Rectangle {
             width: parent.width * root.ratio
             height: parent.height
-            radius: 2
+            radius: Theme.r(Theme.radiusXs, height)
             color: Theme.accent
         }
     }
@@ -50,7 +50,7 @@ Item {
     Rectangle {
         width: 16
         height: 16
-        radius: 3
+        radius: Theme.r(Theme.radiusXl, height)
         anchors.verticalCenter: parent.verticalCenter
         x: root.ratio * (root.width - width)
         color: Theme.accent

@@ -4,8 +4,10 @@ import qs
 
 Rectangle {
     Layout.fillWidth: true
-    Layout.topMargin: 2
-    Layout.bottomMargin: 2
+    Layout.topMargin: 3
+    Layout.bottomMargin: 3
+    Layout.leftMargin: 4
+    Layout.rightMargin: 4
     implicitHeight: 1
     color: Theme.separator
 }
