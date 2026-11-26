@@ -15,6 +15,17 @@ RowLayout {
 
     spacing: 0
 
+    // Tray ikonuna ait pencereler (ör. "vesktop_status_icon_1" -> dev.vencord.Vesktop, "steam" -> steam)
+    function windowsFor(item) {
+        const id = (item.id || "").toLowerCase().replace(/_status_icon(_\d+)?$/, "");
+        if (id === "")
+            return [];
+        return Toplevels.list.filter(t => {
+            const a = (t.appId || "").toLowerCase();
+            return a !== "" && (a === id || a.endsWith("." + id) || id.endsWith("." + a));
+        });
+    }
+
     function openMenu(btn, item) {
         menu.stack = [];
         menu.trayItem = item;
@@ -30,6 +41,22 @@ RowLayout {
             required property SystemTrayItem modelData
 
             hPadding: 4
+
+            // Sol tıktan sonra uygulama kendi penceresini öne getiremediyse
+            // (Wayland'de odak çalma yasak / AppIndicator'larda Activate yok) yardım et.
+            Timer {
+                id: followUp
+                interval: 500
+                onTriggered: {
+                    const wins = root.windowsFor(btn.modelData);
+                    if (wins.some(w => w.activated))
+                        return;
+                    if (wins.length > 0)
+                        Toplevels.activate(wins.find(w => !w.minimized) ?? wins[0]);
+                    else if (btn.modelData.hasMenu)
+                        root.openMenu(btn, btn.modelData);
+                }
+            }
 
             Icon {
                 icon: btn.modelData.icon
@@ -52,8 +79,10 @@ RowLayout {
                     modelData.secondaryActivate();
                 else if (modelData.onlyMenu && modelData.hasMenu)
                     root.openMenu(btn, modelData);
-                else
+                else {
                     modelData.activate();
+                    followUp.restart();
+                }
             }
             onScrolled: wheel => modelData.scroll(wheel.angleDelta.y, false)
         }
