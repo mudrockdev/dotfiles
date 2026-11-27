@@ -10,7 +10,8 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    // [{ id, appId, title, activated, minimized, maximized, fullscreen }]
+    // [{ id, appId, title, activated, minimized, maximized, fullscreen,
+    //    workspaces: [{ id, name, outputs }], geometry: { output, x, y, w, h } | null }]
     property var list: []
     // pencere id -> önizleme görüntüsü URL'si
     property var previews: ({})
@@ -20,6 +21,15 @@ Singleton {
     // Pencerenin küçük bir önizlemesini yakalat (sonuç previews[id] içine gelir).
     function capture(t) {
         proc.write("capture " + t.id + " " + previewDir + "/" + t.id + ".ppm 480 270\n");
+    }
+
+    // Pencere, verilen çalışma alanında (Quickshell Windowset) ve ekranda mı?
+    // COSMIC çalışma alanı kimliği göndermiyor; ad + çıkış adı ile eşleştirilir.
+    function onWorkspace(t, ws, screenName) {
+        return (t.workspaces ?? []).some(w => {
+            const same = w.id !== "" && ws.id ? w.id === ws.id : w.name === ws.name;
+            return same && (w.outputs.length === 0 || !screenName || w.outputs.includes(screenName));
+        });
     }
 
     function activate(t) {

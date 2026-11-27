@@ -4,7 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Panelden değiştirilen kalıcı ayarlar (~/.local/state/quickshell/.../settings.json).
+// Panelden değiştirilen kalıcı ayarlar ($XDG_STATE_HOME/quickshell-panel/settings.json).
 Singleton {
     id: root
 
@@ -17,7 +17,8 @@ Singleton {
     property alias favoritesImported: adapter.favoritesImported
 
     FileView {
-        path: Quickshell.statePath("settings.json")
+        // Sabit konum: Quickshell.statePath yapılandırmanın yoluna göre değişiyor
+        path: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/quickshell-panel/settings.json"
         blockLoading: true
         printErrors: false
         onAdapterUpdated: writeAdapter()

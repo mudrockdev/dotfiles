@@ -6,13 +6,21 @@ protokolünü sunmuyor. Bu betik şunları konuşur:
   - ext_foreign_toplevel_list_v1                       (pencere listesi, app_id, başlık)
   - zcosmic_toplevel_info_v1 (v2+)                     (odakta / küçültülmüş / ...)
   - zcosmic_toplevel_manager_v1                        (etkinleştir / küçült / kapat)
+  - ext_workspace_manager_v1 + wl_output               (pencerenin çalışma alanı / çıkışı)
   - ext_foreign_toplevel_image_capture_source_manager_v1 +
     ext_image_copy_capture_manager_v1 + wl_shm          (pencere önizlemesi)
 
 Çıktı (stdout), satır başına bir JSON nesnesi:
   {"type": "toplevels", "list": [{"id", "appId", "title", "activated",
-                                  "minimized", "maximized", "fullscreen"}, ...]}
+                                  "minimized", "maximized", "fullscreen", "stack",
+                                  "workspaces": [{"id", "name", "outputs": [...]}, ...],
+                                  "geometry": {"output", "x", "y", "w", "h"} | null}, ...]}
   {"type": "preview", "id": <id>, "path": "<dosya>", "ok": true|false}
+
+"stack": pencerenin en son odaklandığı sıra (büyük = üstte). COSMIC yığın sırasını bildirmiyor;
+odaklanan pencere öne geldiği için odak geçmişi kullanılır. Geçmiş, pencerenin kalıcı
+kimliğiyle (ext_foreign_toplevel identifier) $XDG_RUNTIME_DIR/quickshell-previews/stack.json
+içinde tutulur; betik yeniden başlasa da sıra korunur.
 
 Girdi (stdin), satır başına bir komut:
   activate <id> | minimize <id> | unminimize <id> | close <id>
@@ -49,11 +57,21 @@ SHM_FORMATS = {
 
 EXT_LIST_EV_TOPLEVEL, EXT_LIST_EV_FINISHED = 0, 1
 EXT_HANDLE_DESTROY = 0
-EXT_HANDLE_EV_CLOSED, EXT_HANDLE_EV_TITLE, EXT_HANDLE_EV_APP_ID = 0, 2, 3
+EXT_HANDLE_EV_CLOSED, EXT_HANDLE_EV_TITLE, EXT_HANDLE_EV_APP_ID, EXT_HANDLE_EV_IDENTIFIER = 0, 2, 3, 4
 
 COSMIC_INFO_GET_COSMIC_TOPLEVEL = 1
 COSMIC_HANDLE_DESTROY = 0
 COSMIC_HANDLE_EV_STATE = 8
+COSMIC_HANDLE_EV_GEOMETRY = 9              # v2+: output, x, y, w, h (çıkışa göre mantıksal)
+COSMIC_HANDLE_EV_EXT_WS_ENTER, COSMIC_HANDLE_EV_EXT_WS_LEAVE = 10, 11  # v2+
+
+WS_MGR_EV_GROUP, WS_MGR_EV_WORKSPACE = 0, 1
+WS_GROUP_EV_OUTPUT_ENTER, WS_GROUP_EV_OUTPUT_LEAVE = 1, 2
+WS_GROUP_EV_WS_ENTER, WS_GROUP_EV_WS_LEAVE, WS_GROUP_EV_REMOVED = 3, 4, 5
+WS_EV_ID, WS_EV_NAME, WS_EV_REMOVED = 0, 1, 5
+WS_GROUP_DESTROY, WS_DESTROY = 1, 0
+
+WL_OUTPUT_EV_NAME = 4
 STATE_MAXIMIZED, STATE_MINIMIZED, STATE_ACTIVATED, STATE_FULLSCREEN = 0, 1, 2, 3
 
 MGR_CLOSE, MGR_ACTIVATE, MGR_SET_MINIMIZED, MGR_UNSET_MINIMIZED = 1, 2, 5, 6
@@ -157,6 +175,14 @@ class Toplevels:
         self.handles = {}        # ext handle id -> dict
         self.cosmic_to_ext = {}  # cosmic handle id -> ext handle id
         self.captures = {}       # session/frame id -> capture durumu
+        self.output_globals = []  # (name, version) — bağlanmadan önce
+        self.outputs = {}         # wl_output nesne id -> bağlayıcı adı (ör. "DP-1")
+        self.ws_mgr = None
+        self.ws_groups = {}       # grup id -> set(wl_output id)
+        self.workspaces = {}      # ext_workspace_handle id -> {"id", "name", "group"}
+        self.stack_path = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "quickshell-previews", "stack.json")
+        self.stack = self.load_stack()  # identifier -> odak sırası
+        self.stack_next = max(self.stack.values(), default=0) + 1
         self.dirty = True
 
     # --- kurulum ----------------------------------------------------------
@@ -182,6 +208,10 @@ class Toplevels:
             sys.exit("ext_foreign_toplevel_list_v1 / zcosmic_toplevel_info_v1 not found (not COSMIC?)")
         if self.globals["zcosmic_toplevel_info_v1"][1] < 2:
             sys.exit("zcosmic_toplevel_info_v1 version < 2")
+        # Çalışma alanı nesneleri, pencereler bildirilmeden önce bu bağlantıda var olmalı
+        for name, ver in self.output_globals:
+            self.bind_output(name, ver)
+        self.ws_mgr = self.bind("ext_workspace_manager_v1", 1)
         self.info = self.bind("zcosmic_toplevel_info_v1", 3)
         self.mgr = self.bind("zcosmic_toplevel_manager_v1", 4)
         self.seat = self.bind("wl_seat", 1)
@@ -189,6 +219,41 @@ class Toplevels:
         self.src_mgr = self.bind("ext_foreign_toplevel_image_capture_source_manager_v1", 1)
         self.copy_mgr = self.bind("ext_image_copy_capture_manager_v1", 1)
         self.list = self.bind("ext_foreign_toplevel_list_v1", 1)
+
+    def load_stack(self):
+        try:
+            with open(self.stack_path) as f:
+                data = json.load(f)
+            return {k: int(v) for k, v in data.items()}
+        except (OSError, ValueError, AttributeError):
+            return {}
+
+    def save_stack(self):
+        # yalnızca açık pencereler; kapananların kaydı silinir
+        live = {h["ident"] for h in self.handles.values() if h["ident"]}
+        self.stack = {k: v for k, v in self.stack.items() if k in live}
+        try:
+            os.makedirs(os.path.dirname(self.stack_path), exist_ok=True)
+            tmp = self.stack_path + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(self.stack, f)
+            os.replace(tmp, self.stack_path)
+        except OSError:
+            pass
+
+    def raise_handle(self, h):
+        if not h["ident"]:
+            return
+        if self.stack.get(h["ident"]) == self.stack_next - 1:
+            return  # zaten en üstte
+        self.stack[h["ident"]] = self.stack_next
+        self.stack_next += 1
+        self.save_stack()
+
+    def bind_output(self, name, ver):
+        oid = self.wl.new_id()
+        self.wl.send(self.registry, WL_REGISTRY_BIND, name, "wl_output", min(ver, 4), oid)
+        self.outputs[oid] = ""
 
     # --- olaylar ----------------------------------------------------------
     def dispatch(self, obj, op, p):
@@ -205,6 +270,10 @@ class Toplevels:
                 iface, off = get_string(p, off)
                 ver, _ = get_uint(p, off)
                 self.globals.setdefault(iface, (name, ver))
+                if iface == "wl_output" and self.info is not None:
+                    self.bind_output(name, ver)  # sonradan takılan ekran
+                elif iface == "wl_output":
+                    self.output_globals.append((name, ver))
             return
         if obj == self.list:
             if op == EXT_LIST_EV_TOPLEVEL:
@@ -213,7 +282,8 @@ class Toplevels:
                 self.wl.send(self.info, COSMIC_INFO_GET_COSMIC_TOPLEVEL, cid, hid)
                 self.handles[hid] = {"id": hid, "cosmic": cid, "appId": "", "title": "",
                                      "activated": False, "minimized": False,
-                                     "maximized": False, "fullscreen": False}
+                                     "maximized": False, "fullscreen": False,
+                                     "ws": set(), "geometry": None, "ident": ""}
                 self.cosmic_to_ext[cid] = hid
             elif op == EXT_LIST_EV_FINISHED:
                 sys.exit(0)
@@ -224,6 +294,10 @@ class Toplevels:
                 h["title"], _ = get_string(p, 0)
             elif op == EXT_HANDLE_EV_APP_ID:
                 h["appId"], _ = get_string(p, 0)
+            elif op == EXT_HANDLE_EV_IDENTIFIER:
+                h["ident"], _ = get_string(p, 0)
+                if h["activated"]:
+                    self.raise_handle(h)
             elif op == EXT_HANDLE_EV_CLOSED:
                 for cap in list(self.captures.values()):
                     if cap["hid"] == obj:
@@ -240,11 +314,65 @@ class Toplevels:
                 arr, _ = get_array(p, 0)
                 states = set(struct.unpack(f"<{len(arr) // 4}I", arr))
                 h = self.handles[hid]
+                if STATE_ACTIVATED in states and not h["activated"]:
+                    h["activated"] = True
+                    self.raise_handle(h)
                 h["activated"] = STATE_ACTIVATED in states
                 h["minimized"] = STATE_MINIMIZED in states
                 h["maximized"] = STATE_MAXIMIZED in states
                 h["fullscreen"] = STATE_FULLSCREEN in states
                 self.dirty = True
+            elif op == COSMIC_HANDLE_EV_GEOMETRY:
+                out, x, y, w, hh = struct.unpack_from("<Iiiii", p)
+                self.handles[hid]["geometry"] = {"output": out, "x": x, "y": y, "w": w, "h": hh}
+                self.dirty = True
+            elif op == COSMIC_HANDLE_EV_EXT_WS_ENTER:
+                self.handles[hid]["ws"].add(get_uint(p, 0)[0])
+                self.dirty = True
+            elif op == COSMIC_HANDLE_EV_EXT_WS_LEAVE:
+                self.handles[hid]["ws"].discard(get_uint(p, 0)[0])
+                self.dirty = True
+            return
+        if obj in self.outputs:
+            if op == WL_OUTPUT_EV_NAME:
+                self.outputs[obj], _ = get_string(p, 0)
+                self.dirty = True
+            return
+        if obj == self.ws_mgr:
+            if op == WS_MGR_EV_GROUP:
+                self.ws_groups[get_uint(p, 0)[0]] = set()
+            elif op == WS_MGR_EV_WORKSPACE:
+                self.workspaces[get_uint(p, 0)[0]] = {"id": "", "name": "", "group": None}
+            return
+        group = self.ws_groups.get(obj)
+        if group is not None:
+            arg = get_uint(p, 0)[0] if len(p) >= 4 else 0
+            if op == WS_GROUP_EV_OUTPUT_ENTER:
+                group.add(arg)
+            elif op == WS_GROUP_EV_OUTPUT_LEAVE:
+                group.discard(arg)
+            elif op == WS_GROUP_EV_WS_ENTER and arg in self.workspaces:
+                self.workspaces[arg]["group"] = obj
+            elif op == WS_GROUP_EV_WS_LEAVE and arg in self.workspaces:
+                if self.workspaces[arg]["group"] == obj:
+                    self.workspaces[arg]["group"] = None
+            elif op == WS_GROUP_EV_REMOVED:
+                del self.ws_groups[obj]
+                self.wl.send(obj, WS_GROUP_DESTROY)
+            self.dirty = True
+            return
+        ws = self.workspaces.get(obj)
+        if ws is not None:
+            if op == WS_EV_ID:
+                ws["id"], _ = get_string(p, 0)
+            elif op == WS_EV_NAME:
+                ws["name"], _ = get_string(p, 0)
+            elif op == WS_EV_REMOVED:
+                del self.workspaces[obj]
+                self.wl.send(obj, WS_DESTROY)
+                for h in self.handles.values():
+                    h["ws"].discard(obj)
+            self.dirty = True
             return
         cap = self.captures.get(obj)
         if cap is not None:
@@ -356,11 +484,23 @@ class Toplevels:
     def emit_preview(self, hid, path, ok):
         self.write({"type": "preview", "id": hid, "path": path, "ok": ok})
 
+    def ws_info(self, wid):
+        ws = self.workspaces[wid]
+        outs = self.ws_groups.get(ws["group"], set())
+        return {"id": ws["id"], "name": ws["name"], "outputs": sorted(self.outputs.get(o, "") for o in outs)}
+
     def emit(self):
         if not self.dirty:
             return
         self.dirty = False
-        out = [{k: v for k, v in h.items() if k != "cosmic"} for h in self.handles.values()]
+        out = []
+        for h in self.handles.values():
+            o = {k: v for k, v in h.items() if k not in ("cosmic", "ws", "geometry", "ident")}
+            o["stack"] = self.stack.get(h["ident"], 0)
+            o["workspaces"] = [self.ws_info(w) for w in h["ws"] if w in self.workspaces]
+            g = h["geometry"]
+            o["geometry"] = None if g is None else dict(g, output=self.outputs.get(g["output"], ""))
+            out.append(o)
         self.write({"type": "toplevels", "list": out})
 
     def run(self):

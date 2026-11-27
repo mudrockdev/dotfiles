@@ -22,92 +22,100 @@ PanelWindow {
     WlrLayershell.namespace: "quickshell-panel"
     WlrLayershell.layer: WlrLayer.Top
 
-    // Boş alana tıklama: sol = açık popup'ı kapat, sağ = panel menüsü
-    MouseArea {
-        anchors.fill: parent
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        onPressed: Popups.closeCurrent()
-        onClicked: mouse => {
-            if (mouse.button !== Qt.RightButton)
-                return;
-            Popups.justClosed = null;
-            menuAnchor.x = mouse.x;
-            panelMenu.visible = true;
-        }
-    }
-
-    // Panel menüsü tıklanan noktanın altında açılsın
+    // Tüm içerik tek bir QML öğesinde: çalışma alanı önizlemesi bunun görüntüsünü alır
+    // (pencerenin kök öğesi QML dışından oluşturulduğu için grabToImage ile alınamıyor).
     Item {
-        id: menuAnchor
-        width: 1
-        height: parent.height
-    }
+        id: content
+        anchors.fill: parent
 
-    Popup {
-        id: panelMenu
-        anchorItem: menuAnchor
-        minWidth: 200
-
-        MenuItem {
-            text: Editor.active ? "Finish editing" : "Edit panel"
-            icon: Editor.active ? "object-select-symbolic" : "document-edit-symbolic"
-            onTriggered: {
-                Editor.active = !Editor.active;
-                panelMenu.visible = false;
+        // Boş alana tıklama: sol = açık popup'ı kapat, sağ = panel menüsü
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onPressed: Popups.closeCurrent()
+            onClicked: mouse => {
+                if (mouse.button !== Qt.RightButton)
+                    return;
+                Popups.justClosed = null;
+                menuAnchor.x = mouse.x;
+                panelMenu.visible = true;
             }
         }
-    }
 
-    // Sol: başlatıcı + uygulama listesi
-    RowLayout {
-        anchors.left: parent.left
-        anchors.leftMargin: 2
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 0
+        // Panel menüsü tıklanan noktanın altında açılsın
+        Item {
+            id: menuAnchor
+            width: 1
+            height: parent.height
+        }
 
-        Launcher {}
-        AppList {}
-        // Düzenleme modundayken bitirme düğmesi
-        BarButton {
-            visible: Editor.active
-            Layout.leftMargin: 4
-            active: true
-            activeColor: Theme.accent
-            Label {
-                text: "Done"
-                color: "white"
-                font.bold: true
+        Popup {
+            id: panelMenu
+            anchorItem: menuAnchor
+            minWidth: 200
+
+            MenuItem {
+                text: Editor.active ? "Finish editing" : "Edit panel"
+                icon: Editor.active ? "object-select-symbolic" : "document-edit-symbolic"
+                onTriggered: {
+                    Editor.active = !Editor.active;
+                    panelMenu.visible = false;
+                }
             }
-            onClicked: Editor.active = false
         }
-    }
 
-    // Orta: saat
-    Clock {
-        anchors.centerIn: parent
-    }
+        // Sol: başlatıcı + uygulama listesi
+        RowLayout {
+            anchors.left: parent.left
+            anchors.leftMargin: 2
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 0
 
-    // Sağ: sistem monitörü, çalışma alanları, klavye, tepsi, medya, tema, ses, bluetooth, ağ, güç
-    RowLayout {
-        anchors.right: parent.right
-        anchors.rightMargin: 2
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 0
-
-        SysMonitor {
-            Layout.rightMargin: 4
+            Launcher {}
+            AppList {}
+            // Düzenleme modundayken bitirme düğmesi
+            BarButton {
+                visible: Editor.active
+                Layout.leftMargin: 4
+                active: true
+                activeColor: Theme.accent
+                Label {
+                    text: "Done"
+                    color: "white"
+                    font.bold: true
+                }
+                onClicked: Editor.active = false
+            }
         }
-        Workspaces {
-            barScreen: bar.screen
-            Layout.rightMargin: 4
+
+        // Orta: saat
+        Clock {
+            anchors.centerIn: parent
         }
-        Keyboard {}
-        Tray {}
-        Media {}
-        ThemeSelector {}
-        Audio {}
-        BluetoothButton {}
-        NetworkButton {}
-        Power {}
+
+        // Sağ: sistem monitörü, çalışma alanları, klavye, tepsi, medya, tema, ses, bluetooth, ağ, güç
+        RowLayout {
+            anchors.right: parent.right
+            anchors.rightMargin: 2
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 0
+
+            SysMonitor {
+                Layout.rightMargin: 4
+            }
+            Workspaces {
+                barScreen: bar.screen
+                panelItem: content
+                Layout.rightMargin: 4
+            }
+            Keyboard {}
+            Tray {}
+            Media {}
+            ThemeSelector {}
+            Audio {}
+            BluetoothButton {}
+            NetworkButton {}
+            Power {}
+        }
     }
 }
