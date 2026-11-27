@@ -8,15 +8,32 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    readonly property color panelBg: Qt.rgba(0.106, 0.106, 0.106, Config.panelOpacity)
-    readonly property color popupBg: Qt.rgba(0.137, 0.137, 0.137, 0.97)
+    // Panelden seçilen tema (Settings.theme): "default" | "azurlane"
+    readonly property var themes: [
+        // icon: menüdeki kare ikon; logo: varsa başlatıcıda ikon yerine gösterilen geniş görsel
+        { id: "default", name: "Default", icon: "view-app-grid-symbolic", colorize: true, logo: "" },
+        { id: "azurlane", name: "Azur Lane", icon: Qt.resolvedUrl("assets/al-anchor.svg"), colorize: false, logo: Qt.resolvedUrl("assets/al.svg") }
+    ]
+    readonly property string name: Settings.theme
+    readonly property bool azur: name === "azurlane"
+
+    // Uygulama başlatıcı: logo varsa o, yoksa (boyanabilir) tema ikonu
+    readonly property var current: themes.find(t => t.id === name) ?? themes[0]
+    readonly property string launcherLogo: current.logo
+    readonly property string launcherIcon: current.icon
+    readonly property bool launcherIconColorize: current.colorize
+
+    readonly property color panelBg: azur ? Qt.rgba(0.04, 0.08, 0.20, Math.max(Config.panelOpacity, 0.75)) : Qt.rgba(0.106, 0.106, 0.106, Config.panelOpacity)
+    readonly property color popupBg: azur ? Qt.rgba(0.05, 0.09, 0.22, 0.97) : Qt.rgba(0.137, 0.137, 0.137, 0.97)
     readonly property color fg: "#f2f2f2"
-    readonly property color fgDim: "#a6a6a6"
-    readonly property color hover: Qt.rgba(1, 1, 1, 0.12)
-    readonly property color pressed: Qt.rgba(1, 1, 1, 0.22)
-    readonly property color border: Qt.rgba(1, 1, 1, 0.10)
-    readonly property color separator: Qt.rgba(1, 1, 1, 0.08)
-    property color accent: "#e51e21"
+    readonly property color fgDim: azur ? "#9fb4dc" : "#a6a6a6"
+    readonly property color hover: azur ? Qt.rgba(0.31, 0.55, 1, 0.20) : Qt.rgba(1, 1, 1, 0.12)
+    readonly property color pressed: azur ? Qt.rgba(0.31, 0.55, 1, 0.35) : Qt.rgba(1, 1, 1, 0.22)
+    readonly property color border: azur ? Qt.rgba(0.31, 0.55, 1, 0.35) : Qt.rgba(1, 1, 1, 0.10)
+    readonly property color separator: azur ? Qt.rgba(0.31, 0.55, 1, 0.18) : Qt.rgba(1, 1, 1, 0.08)
+    // Varsayılan temada COSMIC accent rengi, Azur Lane'de sabit mavi
+    property color cosmicAccent: "#e51e21"
+    readonly property color accent: azur ? "#4f8bff" : cosmicAccent
 
     // minimon benzeri renkler
     readonly property color cpu: "#ff5f56"
@@ -72,7 +89,7 @@ Singleton {
             const g = /green:\s*([\d.]+)/.exec(t);
             const b = /blue:\s*([\d.]+)/.exec(t);
             if (r && g && b)
-                root.accent = Qt.rgba(parseFloat(r[1]), parseFloat(g[1]), parseFloat(b[1]), 1);
+                root.cosmicAccent = Qt.rgba(parseFloat(r[1]), parseFloat(g[1]), parseFloat(b[1]), 1);
         }
     }
 }

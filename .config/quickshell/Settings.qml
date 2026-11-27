@@ -9,6 +9,8 @@ Singleton {
     id: root
 
     property alias showMediaControls: adapter.showMediaControls
+    // "default" | "azurlane"
+    property alias theme: adapter.theme
 
     FileView {
         path: Quickshell.statePath("settings.json")
@@ -23,6 +25,7 @@ Singleton {
         JsonAdapter {
             id: adapter
             property bool showMediaControls: true
+            property string theme: "default"
         }
     }
 }

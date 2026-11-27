@@ -37,7 +37,7 @@ PanelWindow {
         anchors.centerIn: parent
     }
 
-    // Sağ: sistem monitörü, çalışma alanları, klavye, tepsi, medya, ses, bluetooth, ağ, güç
+    // Sağ: sistem monitörü, çalışma alanları, klavye, tepsi, medya, tema, ses, bluetooth, ağ, güç
     RowLayout {
         anchors.right: parent.right
         anchors.rightMargin: 2
@@ -54,6 +54,7 @@ PanelWindow {
         Keyboard {}
         Tray {}
         Media {}
+        ThemeSelector {}
         Audio {}
         BluetoothButton {}
         NetworkButton {}
