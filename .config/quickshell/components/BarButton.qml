@@ -12,6 +12,8 @@ Rectangle {
     property int indicator: 0
     readonly property alias hovered: ma.containsMouse
     default property alias content: row.data
+    // Düğmenin tamamını kaplayan, iç MouseArea'nın üstündeki öğeler (ör. sürükleme alanı)
+    property alias overlay: overlayItem.data
 
     // Popup içindeki butonlar açık popup'ı kapatmamalı
     function insidePopup() {
@@ -69,5 +71,10 @@ Rectangle {
         }
         onClicked: mouse => root.clicked(mouse)
         onWheel: wheel => root.scrolled(wheel)
+    }
+
+    Item {
+        id: overlayItem
+        anchors.fill: parent
     }
 }

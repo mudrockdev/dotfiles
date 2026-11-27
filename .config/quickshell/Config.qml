@@ -35,13 +35,15 @@ Singleton {
     // Bu önekle başlayan arayüzler ağ hızına dahil edilmez.
     readonly property var netIgnorePrefixes: ["lo", "veth", "docker", "br-", "virbr", "tailscale", "tun", "wg", "vnet"]
 
-    // --- Favoriler ---
+    // --- Favoriler (sabitlenmiş başlatıcılar) ---
+    // Kendi ayar dosyamızda (Settings.favorites) tutulur; COSMIC paneline yazılmaz.
+    // İlk çalıştırmada COSMIC App List favorileri bir kez içe aktarılır (salt okunur).
     readonly property string cosmicFavoritesPath: Quickshell.env("HOME") + "/.config/cosmic/com.system76.CosmicAppList/v1/favorites"
-    // Yalnızca COSMIC favori dosyası yoksa kullanılır.
+    // COSMIC favori dosyası da yoksa ilk liste
     readonly property var fallbackFavorites: ["firefox", "org.gnome.Nautilus", "com.system76.CosmicSettings"]
-    property var favorites: fallbackFavorites
-    // Dosya okunmadan yazmak gerçek favorileri silebilir; okunana kadar yazma yok.
-    property bool favoritesReady: false
+    readonly property var favorites: Settings.favorites
+    // İçe aktarma bitmeden yazmak listeyi ezebilir; o zamana kadar değişiklik yok.
+    readonly property bool favoritesReady: Settings.favoritesImported
 
     function parseFavorites(text) {
         const ids = [];
@@ -52,15 +54,12 @@ Singleton {
         return ids;
     }
 
-    // COSMIC App List ile aynı RON biçiminde yaz; COSMIC paneli de güncellenir.
     function setFavorites(ids) {
         if (!root.favoritesReady) {
             console.warn("Favorites not loaded yet, change ignored");
             return;
         }
-        root.favorites = ids;
-        const esc = s => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-        favFile.setText("[\n" + ids.map(i => '    "' + esc(i) + '",').join("\n") + "\n]");
+        Settings.favorites = ids;
     }
     function pin(id) {
         if (!root.favorites.includes(id))
@@ -70,18 +69,17 @@ Singleton {
         setFavorites(root.favorites.filter(f => f !== id));
     }
 
+    // Tek seferlik içe aktarma
     FileView {
-        id: favFile
-        path: root.cosmicFavoritesPath
-        atomicWrites: false
-        watchChanges: true
+        path: Settings.favoritesImported ? "" : root.cosmicFavoritesPath
         printErrors: false
-        onFileChanged: reload()
         onLoaded: {
-            root.favorites = root.parseFavorites(text());
-            root.favoritesReady = true;
+            Settings.favorites = root.parseFavorites(text());
+            Settings.favoritesImported = true;
         }
-        // Dosya yoksa (COSMIC dışı) yedek liste ile başla; ilk sabitlemede oluşturulur.
-        onLoadFailed: root.favoritesReady = true
+        onLoadFailed: {
+            Settings.favorites = root.fallbackFavorites;
+            Settings.favoritesImported = true;
+        }
     }
 }

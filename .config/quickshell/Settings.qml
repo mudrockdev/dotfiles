@@ -11,6 +11,10 @@ Singleton {
     property alias showMediaControls: adapter.showMediaControls
     // "default" | "azurlane"
     property alias theme: adapter.theme
+    // Sabitlenmiş başlatıcılar (uygulama kimlikleri, sırayla)
+    property alias favorites: adapter.favorites
+    // İlk çalıştırmada COSMIC favorileri bir kez içe aktarıldı mı
+    property alias favoritesImported: adapter.favoritesImported
 
     FileView {
         path: Quickshell.statePath("settings.json")
@@ -26,6 +30,8 @@ Singleton {
             id: adapter
             property bool showMediaControls: true
             property string theme: "default"
+            property var favorites: []
+            property bool favoritesImported: false
         }
     }
 }

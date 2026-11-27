@@ -42,6 +42,74 @@ RowLayout {
             Quickshell.execDetached([key]);
     }
 
+    // Sürükleme durumu. Sürükleme boyunca model değişmez (düğmeler yeniden
+    // oluşturulup fare bırakılmasın); öğeler yalnızca görsel olarak kaydırılır,
+    // yeni sıra bırakınca kaydedilir.
+    property string dragKey: ""
+    property int dragFrom: -1
+    property int dragTo: -1
+    property real dragDx: 0
+    property real dragStartX: 0
+    property real dragWidth: 0
+
+    // Düzenleme modu kapanırsa yarım kalan sürüklemeyi iptal et
+    Connections {
+        target: Editor
+        function onActiveChanged() {
+            root.dragKey = "";
+        }
+    }
+
+    function startDrag(btn, x) {
+        if (!Config.favoritesReady)
+            return;
+        root.dragFrom = btn.index;
+        root.dragTo = btn.index;
+        root.dragDx = 0;
+        root.dragStartX = x;
+        root.dragWidth = btn.width;
+        root.dragKey = btn.key;
+    }
+
+    // x: fare konumu (root koordinatı). Sürüklenen düğme fareyi izler,
+    // merkezinin geçtiği her düğme bir sıra kayar.
+    function moveDrag(x) {
+        const n = pinnedRepeater.count;
+        const self = pinnedRepeater.itemAt(root.dragFrom);
+        const first = pinnedRepeater.itemAt(0);
+        const last = pinnedRepeater.itemAt(n - 1);
+        if (!self || !first || !last)
+            return;
+        // başlatıcı grubunun dışına taşmasın
+        const minDx = first.x - self.x;
+        const maxDx = last.x + last.width - (self.x + self.width);
+        root.dragDx = Math.max(minDx, Math.min(maxDx, x - root.dragStartX));
+
+        const center = self.x + self.width / 2 + root.dragDx;
+        let to = 0;
+        for (let i = 0; i < n; i++) {
+            const it = pinnedRepeater.itemAt(i);
+            if (i !== root.dragFrom && it && center > it.x + it.width / 2)
+                to++;
+        }
+        root.dragTo = to;
+    }
+
+    function endDrag() {
+        if (root.dragKey === "")
+            return;
+        const from = root.dragFrom;
+        const to = root.dragTo;
+        // Önce kaydırmaları sıfırla (animasyonsuz), sonra yeni sırayı kaydet
+        root.dragKey = "";
+        if (from < 0 || to < 0 || from === to)
+            return;
+        const order = Config.favorites.slice();
+        const [key] = order.splice(from, 1);
+        order.splice(to, 0, key);
+        Config.setFavorites(order);
+    }
+
     readonly property var pinnedItems: Config.favorites.map(f => ({
                 key: f,
                 pinned: true
@@ -67,6 +135,7 @@ RowLayout {
     }
 
     Repeater {
+        id: pinnedRepeater
         model: ScriptModel {
             values: root.pinnedItems
             objectProp: "key"
@@ -99,14 +168,49 @@ RowLayout {
             id: btn
 
             required property var modelData
+            required property int index
             readonly property string key: modelData.key
             readonly property bool pinned: modelData.pinned
             readonly property var entry: root.entryFor(key)
             readonly property var windows: Toplevels.list.filter(t => root.matches(t, btn.key, btn.entry))
             readonly property bool focused: windows.some(w => w.activated)
 
+            readonly property bool dragging: root.dragKey !== "" && root.dragKey === key
+            // Sürükleme sırasında görsel kayma
+            readonly property real dragOffset: {
+                if (!pinned || root.dragKey === "")
+                    return 0;
+                if (dragging)
+                    return root.dragDx;
+                const f = root.dragFrom, t = root.dragTo;
+                if (f < t && index > f && index <= t)
+                    return -root.dragWidth;
+                if (t < f && index >= t && index < f)
+                    return root.dragWidth;
+                return 0;
+            }
+
+            z: dragging ? 10 : 0
+            transform: Translate {
+                x: btn.dragOffset
+                Behavior on x {
+                    // yalnızca yer açan komşular kaysın; sürüklenen fareyi anında izlesin
+                    enabled: root.dragKey !== "" && !btn.dragging
+                    NumberAnimation {
+                        duration: 120
+                        easing.type: Easing.OutCubic
+                    }
+                }
+            }
+
             hPadding: 3
             indicator: focused ? 2 : windows.length > 0 ? 1 : 0
+            // Düzenleme modu: sabitlenmişler vurgulu, sürüklenen daha belirgin
+            active: Editor.active && pinned
+            activeColor: dragging ? Qt.alpha(Theme.accent, 0.55) : Qt.alpha(Theme.accent, 0.18)
+            border.width: Editor.active && pinned ? 1 : 0
+            border.color: Qt.alpha(Theme.accent, 0.8)
+            opacity: Editor.active && !pinned ? 0.4 : 1
 
             Icon {
                 icon: btn.entry?.icon ?? btn.key
@@ -114,6 +218,32 @@ RowLayout {
                 colorize: false
                 size: Config.barHeight - 6
             }
+
+            // Düzenleme modunda sol tık başlatmaz; sabitlenmişler sürüklenir.
+            // (Sağ tık alttaki düğmeye geçer, bağlam menüsü çalışmaya devam eder.)
+            overlay: MouseArea {
+                anchors.fill: parent
+                visible: Editor.active
+                acceptedButtons: Qt.LeftButton
+                preventStealing: true
+                cursorShape: !btn.pinned ? Qt.ArrowCursor : btn.dragging ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                onPressed: mouse => {
+                    Popups.closeCurrent();
+                    if (btn.pinned)
+                        root.startDrag(btn, mapToItem(root, mouse.x, mouse.y).x);
+                }
+                onPositionChanged: mouse => {
+                    if (btn.dragging)
+                        root.moveDrag(mapToItem(root, mouse.x, mouse.y).x);
+                }
+                onReleased: if (btn.dragging)
+                    root.endDrag()
+                onCanceled: if (btn.dragging)
+                    root.endDrag()
+            }
+            // Sürüklenen düğme yeniden oluşturulursa sürükleme takılı kalmasın
+            Component.onDestruction: if (btn.dragging)
+                root.dragKey = ""
 
             onClicked: mouse => {
                 // Bu basış açık bir popup'ı kapattıysa tıklama sadece onu kapatır;
