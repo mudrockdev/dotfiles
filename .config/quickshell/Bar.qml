@@ -58,8 +58,20 @@ PanelWindow {
                 text: Editor.active ? "Finish editing" : "Edit panel"
                 icon: Editor.active ? "object-select-symbolic" : "document-edit-symbolic"
                 onTriggered: {
-                    Editor.active = !Editor.active;
                     panelMenu.visible = false;
+                    if (Editor.active)
+                        Editor.finish();
+                    else
+                        Editor.start();
+                }
+            }
+            MenuItem {
+                visible: Editor.active
+                text: "Cancel editing"
+                icon: "edit-undo-symbolic"
+                onTriggered: {
+                    panelMenu.visible = false;
+                    Editor.cancel();
                 }
             }
         }
@@ -73,24 +85,64 @@ PanelWindow {
 
             Launcher {}
             AppList {}
-            // Düzenleme modundayken bitirme düğmesi
-            BarButton {
-                visible: Editor.active
-                Layout.leftMargin: 4
-                active: true
-                activeColor: Theme.accent
-                Label {
-                    text: "Done"
-                    color: "white"
-                    font.bold: true
-                }
-                onClicked: Editor.active = false
-            }
         }
 
         // Orta: saat
         Clock {
+            id: clock
             anchors.centerIn: parent
+        }
+
+        // Düzenleme modunda saatin altında: İptal / Bitti.
+        // Odak yakalamaz; dışarı tıklamak (ör. başlatıcı sürüklemek) onu kapatmaz.
+        PopupWindow {
+            id: editBar
+
+            anchor.item: clock
+            anchor.edges: Edges.Bottom
+            anchor.gravity: Edges.Bottom
+            anchor.adjustment: PopupAdjustment.Slide
+            visible: Editor.active
+            color: "transparent"
+            implicitWidth: editBox.implicitWidth
+            implicitHeight: editBox.implicitHeight + 4
+
+            Rectangle {
+                id: editBox
+                y: 4
+                implicitWidth: editRow.implicitWidth + 16
+                implicitHeight: editRow.implicitHeight + 12
+                color: Theme.popupBg
+                radius: Theme.radiusM
+                border.color: Theme.border
+                border.width: 1
+
+                RowLayout {
+                    id: editRow
+                    anchors.centerIn: parent
+                    spacing: 8
+
+                    Icon {
+                        Layout.leftMargin: 4
+                        icon: "document-edit-symbolic"
+                        color: Theme.fgDim
+                    }
+                    Label {
+                        text: "Editing panel"
+                        color: Theme.fgDim
+                        Layout.rightMargin: 4
+                    }
+                    TextButton {
+                        text: "Cancel"
+                        onClicked: Editor.cancel()
+                    }
+                    TextButton {
+                        text: "Done"
+                        primary: true
+                        onClicked: Editor.finish()
+                    }
+                }
+            }
         }
 
         // Sağ: sistem monitörü, çalışma alanları, klavye, tepsi, medya, tema, ses, bluetooth, ağ, güç
