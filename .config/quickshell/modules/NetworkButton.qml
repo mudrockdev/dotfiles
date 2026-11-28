@@ -7,8 +7,8 @@ import Quickshell.Networking
 import qs
 import qs.components
 
-// COSMIC ağ appleti: uçak modu, VPN'ler (NetworkManager + Tailscale),
-// kablolu bağlantılar, Wi-Fi (bilinen + görünür ağlar, satır içi parola).
+// COSMIC ağ appleti: VPN'ler (NetworkManager + Tailscale), kablolu bağlantılar,
+// Wi-Fi (yalnızca Wi-Fi aygıtı varsa; açıkken bilinen + yakındaki ağlar, satır içi parola).
 BarButton {
     id: root
 
@@ -25,7 +25,6 @@ BarButton {
     property var pskNetwork: null
     property string pskError: ""
     property bool pskBusy: false
-    property bool showVisible: false
     property bool showExitNodes: false
 
     function wifiIcon(strength) {
@@ -99,7 +98,6 @@ BarButton {
                 root.wifi.scannerEnabled = popup.visible && Networking.wifiEnabled;
             if (!popup.visible) {
                 root.pskNetwork = null;
-                root.showVisible = false;
                 root.showExitNodes = false;
                 Net.vpnPasswordFor = "";
             }
@@ -112,19 +110,7 @@ BarButton {
         minWidth: 300
         maxWidth: 360
 
-        // ---------- Uçak modu ----------
-        Toggle {
-            visible: Net.hasRfkill
-            text: "Airplane mode"
-            icon: "airplane-mode-symbolic"
-            checked: Net.airplaneMode
-            onToggled: Net.setAirplaneMode(!Net.airplaneMode)
-        }
-
         // ---------- VPN ----------
-        Separator {
-            visible: Net.hasRfkill && vpnTitle.visible
-        }
         SectionTitle {
             id: vpnTitle
             visible: Net.vpns.length > 0 || Net.tsAvailable
@@ -329,17 +315,23 @@ BarButton {
             delegate: wifiRow
         }
 
-        MenuItem {
+        // Yakındaki (bilinmeyen) ağlar: Wi-Fi açıkken doğrudan listelenir
+        SectionTitle {
             visible: root.otherNets.length > 0
-            text: "Visible networks"
-            secondary: root.otherNets.length
-            trailingIcon: root.showVisible ? "go-down-symbolic" : "go-next-symbolic"
-            onTriggered: root.showVisible = !root.showVisible
+            text: "Nearby networks"
         }
-
         Repeater {
-            model: root.showVisible ? root.otherNets.slice(0, 15) : []
+            model: root.otherNets.slice(0, 10)
             delegate: wifiRow
+        }
+        Label {
+            Layout.fillWidth: true
+            Layout.leftMargin: 8
+            Layout.topMargin: 2
+            Layout.bottomMargin: 2
+            visible: root.wifi !== null && Networking.wifiEnabled && root.wifiNets.length === 0
+            text: "Searching for networks…"
+            color: Theme.fgDim
         }
 
         Separator {}
