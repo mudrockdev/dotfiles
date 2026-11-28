@@ -43,7 +43,7 @@ Singleton {
     readonly property var fallbackFavorites: ["firefox", "org.gnome.Nautilus", "com.system76.CosmicSettings"]
     readonly property var favorites: Settings.favorites
     // İçe aktarma bitmeden yazmak listeyi ezebilir; o zamana kadar değişiklik yok.
-    readonly property bool favoritesReady: Settings.favoritesImported
+    readonly property bool favoritesReady: Settings.loaded && Settings.favoritesImported
 
     function parseFavorites(text) {
         const ids = [];
@@ -71,7 +71,7 @@ Singleton {
 
     // Tek seferlik içe aktarma
     FileView {
-        path: Settings.favoritesImported ? "" : root.cosmicFavoritesPath
+        path: Settings.loaded && !Settings.favoritesImported ? root.cosmicFavoritesPath : ""
         printErrors: false
         onLoaded: {
             Settings.favorites = root.parseFavorites(text());
