@@ -60,6 +60,13 @@ Scope {
             property real dragY: 0
             property real acc: 0
             property int stillFrames: 0
+            // Boşta hafif sallanma: çapa kendi doğal frekansında salınır. Salınım genliği
+            // hedefin altındaysa hareket yönünde hafifçe itilir (salıncak iter gibi), üstündeyse
+            // sönümleme yavaşlatır. Hedef genlik zamanla yavaşça değişir (düzensiz esinti).
+            readonly property bool swing: Settings.anchorSwing
+            readonly property real swingForce: 140      // px/s², uçta (teğet yönünde)
+            property real time: 0
+            onSwingChanged: wake()
 
             function reset() {
                 const p = [], q = [];
@@ -79,12 +86,34 @@ Scope {
             function step(dt) {
                 const p = pts, q = prev, n = links;
                 const w = width, h = height;
-                // Verlet tümleme (0 sabit)
+                time += dt;
+                // Sarkacın açısı ve teğet hızı (bağlantı noktası → çapa)
+                let ax = 0, ay = 0;
+                if (swing && !dragging) {
+                    const ex = p[n].x - p[0].x, ey = p[n].y - p[0].y;
+                    const len = Math.max(1, Math.sqrt(ex * ex + ey * ey));
+                    const th = Math.atan2(ex, ey);
+                    const c = Math.cos(th), sn = Math.sin(th);
+                    const vtx = (p[n].x - q[n].x) / dt, vty = (p[n].y - q[n].y) / dt;
+                    const omega = (vtx * c - vty * sn) / len;
+                    // Enerjiden eşdeğer genlik
+                    const energy = 0.5 * omega * omega + gravity / len * (1 - c);
+                    const amp = Math.acos(Math.max(-1, Math.min(1, 1 - energy * len / gravity)));
+                    const target = (4.5 + 2.5 * Math.sin(2 * Math.PI * time / 13) + 1.2 * Math.sin(2 * Math.PI * time / 5.3 + 1)) * Math.PI / 180;
+                    if (amp < target) {
+                        const dir = Math.abs(omega) > 0.02 ? Math.sign(omega) : 1;
+                        const f = swingForce * Math.min(1, (target - amp) / 0.03) * dir;
+                        ax = f * c;
+                        ay = -f * sn;
+                    }
+                }
+                // Verlet tümleme (0 sabit). Kuvvet katı dönüş gibi dağıtılır (uzaklıkla orantılı)
                 for (let i = 1; i <= n; i++) {
+                    const k = i / n;
                     const vx = (p[i].x - q[i].x) * 0.996;
                     const vy = (p[i].y - q[i].y) * 0.996;
                     q[i] = { x: p[i].x, y: p[i].y };
-                    p[i] = { x: p[i].x + vx, y: p[i].y + vy + gravity * dt * dt };
+                    p[i] = { x: p[i].x + vx + ax * k * dt * dt, y: p[i].y + vy + (gravity + ay * k) * dt * dt };
                 }
                 p[0] = { x: mountX, y: 0 };
                 if (dragging)
@@ -131,7 +160,7 @@ Scope {
                         win.acc -= win.stepDt;
                     }
                     // Hareket bitince uyu (CPU kullanmasın)
-                    let moving = win.dragging;
+                    let moving = win.dragging || win.swing;
                     for (let i = 1; i <= win.links && !moving; i++)
                         if (Math.abs(win.pts[i].x - win.prev[i].x) + Math.abs(win.pts[i].y - win.prev[i].y) > 0.03)
                             moving = true;

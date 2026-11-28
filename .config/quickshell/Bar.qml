@@ -102,19 +102,20 @@ PanelWindow {
 
             readonly property string currentScreen: Settings.anchorScreen !== "" && Quickshell.screens.some(s => s.name === Settings.anchorScreen) ? Settings.anchorScreen : (Quickshell.screens[0]?.name ?? "")
 
-            anchor.item: rightRow
-            anchor.rect.x: rightRow.width
-            anchor.edges: Edges.Bottom | Edges.Left
+            // Panelin altından biraz boşlukla, sağ kenara hizalı (paneli örtmesin)
+            anchor.item: content
+            anchor.edges: Edges.Bottom | Edges.Right
             anchor.gravity: Edges.Bottom | Edges.Left
-            anchor.adjustment: PopupAdjustment.Slide
+            anchor.margins.right: 4
+            anchor.adjustment: PopupAdjustment.SlideX
             visible: Editor.active
             color: "transparent"
             implicitWidth: anchorBox.implicitWidth
-            implicitHeight: anchorBox.implicitHeight + 4
+            implicitHeight: anchorBox.implicitHeight + 8
 
             Rectangle {
                 id: anchorBox
-                y: 4
+                y: 8
                 implicitWidth: Math.max(240, anchorCol.implicitWidth + 12)
                 implicitHeight: anchorCol.implicitHeight + 12
                 color: Theme.popupBg
@@ -137,6 +138,15 @@ PanelWindow {
                         opacity: enabled ? 1 : 0.5
                         checked: Settings.hangingAnchor
                         onToggled: Settings.hangingAnchor = !Settings.hangingAnchor
+                    }
+                    Toggle {
+                        visible: Theme.azur && Settings.hangingAnchor
+                        text: "Idle swinging"
+                        icon: "weather-windy-symbolic"
+                        bold: false
+                        subtitle: "Sways gently in a breeze"
+                        checked: Settings.anchorSwing
+                        onToggled: Settings.anchorSwing = !Settings.anchorSwing
                     }
                     SectionTitle {
                         visible: Theme.azur && Settings.hangingAnchor

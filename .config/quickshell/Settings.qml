@@ -23,6 +23,8 @@ Singleton {
     // Asılı çapa (yalnızca Azur Lane teması): açık mı, hangi ekranda
     property alias hangingAnchor: adapter.hangingAnchor
     property alias anchorScreen: adapter.anchorScreen
+    // Boştayken hafifçe sallansın
+    property alias anchorSwing: adapter.anchorSwing
     // Dosya okunana kadar hiçbir şey yazılmaz; yoksa açılışta varsayılanlar kayıtlı ayarların üstüne yazılır
     property bool loaded: false
 
@@ -55,6 +57,7 @@ Singleton {
             property string menuLayout: "list"
             property bool hangingAnchor: false
             property string anchorScreen: ""
+            property bool anchorSwing: true
         }
     }
 }
