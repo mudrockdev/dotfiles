@@ -17,6 +17,28 @@ BarButton {
 
     onClicked: popup.toggle()
 
+    // Sarkan çapanın zinciri bu düğmeden başlar: ekrandaki merkezini paylaş
+    readonly property string screenName: QsWindow.window?.screen?.name ?? ""
+    readonly property real centerX: {
+        // düzen değişince yeniden hesapla
+        root.x;
+        root.width;
+        root.parent?.x;
+        root.parent?.width;
+        root.QsWindow.window?.width;
+        return root.mapToItem(null, root.width / 2, 0).x;
+    }
+    function publish() {
+        if (root.screenName === "")
+            return;
+        const m = Object.assign({}, Theme.selectorX);
+        m[root.screenName] = root.centerX;
+        Theme.selectorX = m;
+    }
+    onCenterXChanged: publish()
+    onScreenNameChanged: publish()
+    Component.onCompleted: publish()
+
     Popup {
         id: popup
         anchorItem: root

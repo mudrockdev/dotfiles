@@ -20,6 +20,9 @@ Singleton {
     property alias recentApps: adapter.recentApps
     // "list" | "grid"
     property alias menuLayout: adapter.menuLayout
+    // Asılı çapa (yalnızca Azur Lane teması): açık mı, hangi ekranda
+    property alias hangingAnchor: adapter.hangingAnchor
+    property alias anchorScreen: adapter.anchorScreen
     // Dosya okunana kadar hiçbir şey yazılmaz; yoksa açılışta varsayılanlar kayıtlı ayarların üstüne yazılır
     property bool loaded: false
 
@@ -50,6 +53,8 @@ Singleton {
             property var menuFavorites: null
             property var recentApps: []
             property string menuLayout: "list"
+            property bool hangingAnchor: false
+            property string anchorScreen: ""
         }
     }
 }

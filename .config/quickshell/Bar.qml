@@ -86,6 +86,7 @@ PanelWindow {
 
         // Sol: başlatıcı + uygulama listesi
         RowLayout {
+            id: leftRow
             anchors.left: parent.left
             anchors.leftMargin: 2
             anchors.verticalCenter: parent.verticalCenter
@@ -93,6 +94,68 @@ PanelWindow {
 
             Launcher {}
             AppList {}
+        }
+
+        // Düzenleme modunda sağda: sarkan çapa ayarları
+        PopupWindow {
+            id: anchorMenu
+
+            readonly property string currentScreen: Settings.anchorScreen !== "" && Quickshell.screens.some(s => s.name === Settings.anchorScreen) ? Settings.anchorScreen : (Quickshell.screens[0]?.name ?? "")
+
+            anchor.item: rightRow
+            anchor.rect.x: rightRow.width
+            anchor.edges: Edges.Bottom | Edges.Left
+            anchor.gravity: Edges.Bottom | Edges.Left
+            anchor.adjustment: PopupAdjustment.Slide
+            visible: Editor.active
+            color: "transparent"
+            implicitWidth: anchorBox.implicitWidth
+            implicitHeight: anchorBox.implicitHeight + 4
+
+            Rectangle {
+                id: anchorBox
+                y: 4
+                implicitWidth: Math.max(240, anchorCol.implicitWidth + 12)
+                implicitHeight: anchorCol.implicitHeight + 12
+                color: Theme.popupBg
+                radius: Theme.radiusM
+                border.color: Theme.border
+                border.width: 1
+
+                ColumnLayout {
+                    id: anchorCol
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    spacing: 0
+
+                    Toggle {
+                        text: "Hanging anchor"
+                        icon: Qt.resolvedUrl("assets/al-anchor.svg")
+                        colorizeIcon: false
+                        subtitle: Theme.azur ? "Hangs from the theme button; drag it around" : "Azur Lane theme only"
+                        enabled: Theme.azur
+                        opacity: enabled ? 1 : 0.5
+                        checked: Settings.hangingAnchor
+                        onToggled: Settings.hangingAnchor = !Settings.hangingAnchor
+                    }
+                    SectionTitle {
+                        visible: Theme.azur && Settings.hangingAnchor
+                        text: "Monitor"
+                    }
+                    Repeater {
+                        model: Theme.azur && Settings.hangingAnchor ? Quickshell.screens : []
+
+                        delegate: MenuItem {
+                            required property var modelData
+                            text: modelData.name
+                            secondary: modelData.width + "×" + modelData.height
+                            icon: "video-display-symbolic"
+                            checked: modelData.name === anchorMenu.currentScreen
+                            onTriggered: Settings.anchorScreen = modelData.name
+                        }
+                    }
+                }
+            }
         }
 
         // Orta: saat
@@ -155,6 +218,7 @@ PanelWindow {
 
         // Sağ: sistem monitörü, çalışma alanları, klavye, tepsi, medya, tema, ses, bluetooth, ağ, güç
         RowLayout {
+            id: rightRow
             anchors.right: parent.right
             anchors.rightMargin: 2
             anchors.verticalCenter: parent.verticalCenter

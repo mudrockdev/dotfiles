@@ -17,4 +17,7 @@ ShellRoot {
 
         Bar {}
     }
+
+    // Azur Lane temasında isteğe bağlı sarkan çapa
+    HangingAnchor {}
 }

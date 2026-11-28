@@ -21,6 +21,8 @@ Singleton {
     readonly property var current: themes.find(t => t.id === name) ?? themes[0]
     readonly property string launcherLogo: current.logo
     readonly property real launcherLogoAspect: current.logoAspect ?? 1
+    // Tema seçici düğmesinin ekrandaki yatay merkezi, ekran adına göre (sarkan çapa buradan asılır)
+    property var selectorX: ({})
     readonly property string launcherIcon: current.icon
     readonly property bool launcherIconColorize: current.colorize
 

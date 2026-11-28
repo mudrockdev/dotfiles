@@ -8,6 +8,7 @@ Rectangle {
 
     property string text: ""
     property string icon: ""
+    property bool colorizeIcon: true
     property string subtitle: ""
     property bool bold: true
     property bool checked: false
@@ -30,6 +31,7 @@ Rectangle {
         Icon {
             visible: root.icon !== ""
             icon: root.icon
+            colorize: root.colorizeIcon
         }
         ColumnLayout {
             Layout.fillWidth: true
