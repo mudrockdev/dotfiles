@@ -27,6 +27,12 @@ Singleton {
     property alias anchorSwing: adapter.anchorSwing
     // Pencerelerin üstünde göster (kapalıyken yalnızca masaüstünde)
     property alias anchorOverApps: adapter.anchorOverApps
+    // DeepSeek-chan (Live2D masaüstü karakteri, sağ altta): açık mı, ekran, pencerelerin üstünde mi, boy
+    property alias deepseek: adapter.deepseek
+    property alias deepseekScreen: adapter.deepseekScreen
+    property alias deepseekOverApps: adapter.deepseekOverApps
+    // "small" | "medium" | "large"
+    property alias deepseekSize: adapter.deepseekSize
     // Dosya okunana kadar hiçbir şey yazılmaz; yoksa açılışta varsayılanlar kayıtlı ayarların üstüne yazılır
     property bool loaded: false
 
@@ -61,6 +67,10 @@ Singleton {
             property string anchorScreen: ""
             property bool anchorSwing: true
             property bool anchorOverApps: false
+            property bool deepseek: false
+            property string deepseekScreen: ""
+            property bool deepseekOverApps: false
+            property string deepseekSize: "medium"
         }
     }
 }

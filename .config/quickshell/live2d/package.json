@@ -1,0 +1,10 @@
+{
+  "name": "quickshell-live2d",
+  "private": true,
+  "description": "Live2D renderer for the Quickshell panel's desktop character (the model and Cubism Core are not included)",
+  "dependencies": {
+    "untitled-pixi-live2d-engine": "^1.4.0",
+    "pixi.js": "^8.13.1",
+    "@pixi/sound": "^6.0.1"
+  }
+}

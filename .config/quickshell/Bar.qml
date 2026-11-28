@@ -96,7 +96,7 @@ PanelWindow {
             AppList {}
         }
 
-        // Düzenleme modunda sağda: sarkan çapa ayarları
+        // Düzenleme modunda sağda: sarkan çapa ve DeepSeek-chan ayarları
         PopupWindow {
             id: anchorMenu
 
@@ -109,6 +109,9 @@ PanelWindow {
             anchor.margins.right: 4
             anchor.adjustment: PopupAdjustment.SlideX
             visible: Editor.active
+            // Model / Cubism Core sonradan eklenmiş olabilir
+            onVisibleChanged: if (visible)
+                DeepSeek.check()
             color: "transparent"
             implicitWidth: anchorBox.implicitWidth
             implicitHeight: anchorBox.implicitHeight + 8
@@ -172,6 +175,72 @@ PanelWindow {
                             checked: modelData.name === anchorMenu.currentScreen
                             onTriggered: Settings.anchorScreen = modelData.name
                         }
+                    }
+
+                    // ---- DeepSeek-chan (Live2D, sağ alt köşe) ----
+                    Separator {}
+                    Toggle {
+                        text: "DeepSeek-chan"
+                        icon: DeepSeek.available ? "file://" + DeepSeek.dataDir + "/DeepSeek/大肥鱼.png" : "face-smile-symbolic"
+                        colorizeIcon: !DeepSeek.available
+                        subtitle: DeepSeek.available ? "Live2D character in the bottom-right corner" : DeepSeek.missing
+                        enabled: DeepSeek.available
+                        opacity: enabled ? 1 : 0.5
+                        checked: Settings.deepseek && DeepSeek.available
+                        onToggled: Settings.deepseek = !Settings.deepseek
+                    }
+                    Toggle {
+                        visible: DeepSeek.enabled
+                        text: "Show over apps"
+                        icon: "focus-windows-symbolic"
+                        bold: false
+                        subtitle: Settings.deepseekOverApps ? "Always on top of windows" : "Only on the desktop, behind windows"
+                        checked: Settings.deepseekOverApps
+                        onToggled: Settings.deepseekOverApps = !Settings.deepseekOverApps
+                    }
+                    SectionTitle {
+                        visible: DeepSeek.enabled
+                        text: "Size"
+                    }
+                    Repeater {
+                        model: DeepSeek.enabled ? [["small", "Small"], ["medium", "Medium"], ["large", "Large"]] : []
+
+                        delegate: MenuItem {
+                            required property var modelData
+                            text: modelData[1]
+                            icon: "zoom-fit-best-symbolic"
+                            checked: Settings.deepseekSize === modelData[0]
+                            onTriggered: Settings.deepseekSize = modelData[0]
+                        }
+                    }
+                    SectionTitle {
+                        visible: DeepSeek.enabled
+                        text: "Monitor"
+                    }
+                    Repeater {
+                        model: DeepSeek.enabled ? Quickshell.screens : []
+
+                        delegate: MenuItem {
+                            required property var modelData
+                            text: modelData.name
+                            secondary: modelData.width + "×" + modelData.height
+                            icon: "video-display-symbolic"
+                            checked: modelData.name === DeepSeek.screen?.name
+                            onTriggered: Settings.deepseekScreen = modelData.name
+                        }
+                    }
+                    // Model lisansı: yaratıcılar belirtilmeli
+                    Label {
+                        visible: DeepSeek.available
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 260
+                        Layout.margins: 8
+                        Layout.topMargin: 4
+                        text: "DeepSeek-chan model by Kamiya Ryoko (illustration) and 霓虹猫_NeonNeko (Live2D rigging)"
+                        wrapMode: Text.WordWrap
+                        elide: Text.ElideNone
+                        color: Theme.fgDim
+                        font.pixelSize: 10
                     }
                 }
             }
