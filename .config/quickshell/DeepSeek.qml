@@ -72,7 +72,8 @@ Singleton {
             }
         }
         onExited: code => {
-            if (code !== 0 && root.enabled)
+            // 15 = SIGTERM: restarted or turned off by us
+            if (code !== 0 && code !== 15 && root.enabled)
                 console.warn("deepseek: helper exited with code", code);
         }
     }
@@ -94,6 +95,40 @@ Singleton {
         function onDeepseekOverAppsChanged() {
             if (helper.running)
                 helper.write("layer " + (Settings.deepseekOverApps ? "top" : "bottom") + "\n");
+        }
+    }
+
+    // İmleç panelin / menülerin üstündeyken (bizim pencerelerimiz) gözleriyle takip etsin.
+    // Wayland başka pencerelerdeki imleç konumunu vermez; yalnızca buralarda bilinir.
+    // Konum küresel (bileşikleştirici) koordinatlarda; en fazla ~20 kez/sn gönderilir.
+    property point cursorPos
+    property bool cursorInside: false
+    property bool cursorDirty: false
+    function cursorAt(screen, x, y) {
+        if (!helper.running || !screen)
+            return;
+        cursorPos = Qt.point(screen.x + x, screen.y + y);
+        cursorInside = true;
+        cursorDirty = true;
+        if (!cursorTimer.running)
+            cursorTimer.start();
+    }
+    function cursorLeft() {
+        if (!cursorInside)
+            return;
+        cursorInside = false;
+        cursorDirty = true;
+        if (!cursorTimer.running)
+            cursorTimer.start();
+    }
+    Timer {
+        id: cursorTimer
+        interval: 50
+        onTriggered: {
+            if (!root.cursorDirty || !helper.running)
+                return;
+            root.cursorDirty = false;
+            helper.write(root.cursorInside ? `cursor ${Math.round(root.cursorPos.x)} ${Math.round(root.cursorPos.y)}\n` : "cursor none\n");
         }
     }
 

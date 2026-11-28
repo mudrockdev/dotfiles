@@ -28,6 +28,14 @@ PanelWindow {
         id: content
         anchors.fill: parent
 
+        // İmleç paneldeyken DeepSeek-chan bakışlarıyla takip eder (pasif; tıklamaları etkilemez)
+        HoverHandler {
+            onPointChanged: if (hovered)
+                DeepSeek.cursorAt(bar.screen, point.position.x, point.position.y)
+            onHoveredChanged: if (!hovered)
+                DeepSeek.cursorLeft()
+        }
+
         // Boş alana tıklama: sol = açık popup'ı kapat, sağ = panel menüsü
         MouseArea {
             anchors.fill: parent

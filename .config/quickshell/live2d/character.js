@@ -178,7 +178,7 @@
     if (t > nextBlink) { blinkAt = t; nextBlink = t + rand(2, 6) + (Math.random() < 0.2 ? -1.6 : 0); }
     const bt = (t - blinkAt) / 0.16;
     const blink = bt >= 0 && bt < 1 ? Math.abs(bt * 2 - 1) : 1;
-    const open = Math.min(eyeOpen, 1) * blink;
+    const open = Math.min(eyeOpen, 1.5) * blink;   // up to 1.5 = wide open
     for (const id of ["ParamEyeLOpen", "ParamEyeROpen"])
       if (!ov[id]) cm.setParameterValueByIndex(pidx[id], open, 1);
   });
@@ -197,12 +197,22 @@
   function look(x, y) { lookOverride = { x, y }; focus(x, y); }
   function unlook() { lookOverride = null; wander(); }
 
-  app.canvas.addEventListener("pointermove", e => {
+  // Looks toward a point in window coordinates (may be far outside the window)
+  function lookToward(x, y) {
     hoverUntil = now() + 1.2;
     fast(1.5);
-    if (!lookOverride)
-      focus((e.clientX - head.x) / 260, (head.y - e.clientY) / 260);
-  });
+    if (lookOverride) return;
+    const dx = x - head.x, dy = head.y - y;
+    const d = Math.hypot(dx, dy) || 1;
+    const k = Math.min(1, d / 260) / d;   // full turn from 260 px away, direction kept
+    focus(dx * k, dy * k);
+  }
+  app.canvas.addEventListener("pointermove", e => lookToward(e.clientX, e.clientY));
+  // Pointer over the panel or its menus, forwarded by Quickshell (null = left)
+  window.dsCursor = p => {
+    if (p) lookToward(p[0], p[1]);
+    else { hoverUntil = 0; wander(); }
+  };
 
   // ---------------- Poses (motions that hold their last frame) ----------------
   let right = null;        // null | "finger" | "grass"
@@ -318,6 +328,148 @@
       eyeOpen = 1;
       release("ParamAngleY");
     },
+    // Sways side to side to a tune only she hears, eyes closed
+    async sway(my) {
+      look(0, 0);
+      eyeOpen = 0;
+      set("EyeSmile", 1);
+      set("ParamMouthForm", 0.8);
+      set("ParamMouthOpenY", t => 0.08 + 0.08 * Math.max(0, Math.sin(t * 5.2)), 4);
+      set("ParamBodyAngleZ", t => 8 * Math.sin(t * 2.2), 2);
+      set("ParamBodyAngleX", t => 4 * Math.sin(t * 2.2 + 0.4), 2);
+      set("ParamAngleZ", t => 10 * Math.sin(t * 2.2 - 0.6), 2);
+      set("ShoulderZ", t => 6 * Math.sin(t * 2.2 - 0.3), 2);
+      await sleep(rand(5, 8));
+      eyeOpen = 1;
+    },
+    // Looks to one side, then the other, then back at the user
+    async lookAround(my) {
+      const first = Math.random() < 0.5 ? -1 : 1;
+      for (const [x, y, d] of [[0.85 * first, 0.05, 1.6], [0.2 * first, -0.1, 0.5],
+                               [-0.85 * first, 0.1, 1.6], [0, 0.05, 0.8]]) {
+        if (!alive(my)) return;
+        look(x, y);
+        set("ParamBodyAngleX", x * 6, 2);
+        await sleep(d);
+      }
+      if (alive(my) && Math.random() < 0.4) { expr("屑屑眼"); await sleep(1.5); }
+    },
+    // Tilts her head and leans in, curious
+    async curious(my) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      look(0.1 * side, 0.15);
+      set("ParamAngleZ", 14 * side, 2.5);
+      set("LeanInput", -14, 2);
+      set("BrowInnerUp", 0.8);
+      set("ParamMouthOpenY", 0.18); set("ParamMouthForm", 0.2);
+      await sleep(rand(3, 4.5));
+    },
+    // Giggles: eyes squeezed into a smile, shoulders bobbing
+    async giggle(my) {
+      look(0.15, -0.1);
+      set("EyeSmile", 1);
+      eyeOpen = 0.15;
+      set("ParamMouthForm", 1);
+      set("ParamMouthOpenY", t => 0.25 + 0.2 * Math.max(0, Math.sin(t * 15)), 8);
+      set("ShoulderY", t => 5 * Math.abs(Math.sin(t * 7.5)), 6);
+      set("ParamAngleY", t => -3 + 3 * Math.abs(Math.sin(t * 7.5)), 6);
+      if (Math.random() < 0.5) expr("脸红");
+      await sleep(rand(2, 3));
+      eyeOpen = 1;
+    },
+    // A big, slow yawn
+    async yawn(my) {
+      look(0, 0.4);
+      set("ParamAngleY", 10, 1.2);
+      set("ParamMouthOpenY", 1, 1.2); set("JawOpen", 1, 1.2); set("ParamMouthForm", -0.4, 1.2);
+      set("ParamA", 1, 1.2); set("ParamO", 0.6, 1.2);
+      set("ShoulderY", 6, 1);
+      eyeOpen = 0;
+      await sleep(2.2);
+      release("ParamMouthOpenY", "JawOpen", "ParamMouthForm", "ParamA", "ParamO", "ShoulderY", "ParamAngleY");
+      await sleep(0.6);
+      eyeOpen = 0.6;
+      await sleep(0.8);
+      eyeOpen = 1;
+    },
+    // Angry: brows down, puffed cheeks, "hmph" and turns away (rarely the dark face)
+    async angry(my) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const brows = () => {
+        set("ParamBrowLAngle", -1); set("ParamBrowRAngle", -1);
+        set("ParamBrowLY", -1); set("ParamBrowRY", -1);
+      };
+      brows();
+      set("LEyeSquint", 0.6); set("REyeSquint", 0.6);
+      set("ParamMouthForm", -1); set("CheeckPuff", 1);
+      look(0, 0.05);
+      // Stomps: a few quick shakes
+      set("ParamAngleX", t => 6 * Math.sin(t * 22), 10);
+      await sleep(0.7);
+      release("ParamAngleX");
+      if (!alive(my)) return;
+      // Hmph: turns her head away, chin up, eyes closed
+      look(0.9 * side, 0.35);
+      set("ParamAngleZ", -8 * side, 3);
+      eyeOpen = 0;
+      if (Math.random() < 0.25) expr("黑脸");
+      await sleep(rand(1.8, 2.6));
+      if (!alive(my)) return;
+      // Peeks back to check you noticed
+      eyeOpen = 1;
+      look(0.35 * side, 0.1);
+      await sleep(1.4);
+    },
+    // Scared: wide eyes, trembling, leaning back, cold sweat, nervous glances
+    async scared(my) {
+      expr(Math.random() < 0.3 ? "圈圈眼" : "流冷汗");
+      set("BrowInnerUp", 1); set("ParamBrowLY", 1); set("ParamBrowRY", 1);
+      set("ParamBrowLAngle", 1); set("ParamBrowRAngle", 1);
+      set("ParamMouthOpenY", 0.45); set("ParamMouthForm", -1);
+      eyeOpen = 1.3;
+      set("LeanInput", 16, 3);
+      set("ParamAngleX", t => 2.2 * Math.sin(t * 47), 8);
+      set("ParamBodyAngleX", t => 1.5 * Math.sin(t * 41 + 1), 8);
+      set("ShoulderY", 7, 4);
+      for (const x of [-0.7, 0.7, -0.5, 0.1]) {
+        if (!alive(my)) return;
+        look(x, -0.15);
+        await sleep(rand(0.6, 1));
+      }
+      await sleep(0.6);
+      eyeOpen = 1;
+    },
+    // Surprised: a jolt back, eyes wide, mouth open, then a relieved blink
+    async surprised(my) {
+      set("ParamBrowLY", 1, 14); set("ParamBrowRY", 1, 14);
+      set("ParamMouthOpenY", 0.8, 14); set("ParamA", 0.8, 14);
+      eyeOpen = 1.5;
+      set("LeanInput", 20, 12);
+      set("ParamAngleY", 8, 12);
+      look(0, 0.15);
+      await sleep(0.5);
+      release("LeanInput");
+      await sleep(rand(1.2, 1.8));
+      if (!alive(my)) return;
+      eyeOpen = 1;
+      release("ParamA", "ParamAngleY");
+      set("ParamMouthOpenY", 0.2);
+      await sleep(0.8);
+    },
+    // Sad: head down, drooping brows, tears
+    async sad(my) {
+      expr("流泪");
+      set("BrowInnerUp", 1); set("ParamBrowLAngle", 0.7); set("ParamBrowRAngle", 0.7);
+      set("ParamMouthForm", -1);
+      eyeOpen = 0.65;
+      look(-0.2, -0.6);
+      set("ParamAngleY", -10, 1.5);
+      set("ShoulderY", -4, 1.5);
+      // Small sniffles
+      set("ParamBodyAngleY", t => Math.max(0, Math.sin(t * 2.4)) ** 8 * 4, 6);
+      await sleep(rand(4.5, 6.5));
+      eyeOpen = 1;
+    },
     // Clicked several times: flustered (rarely: a bowl falls on her head)
     async flustered(my) {
       expr(Math.random() < 0.12 ? "钢盆" : "＞＜");
@@ -341,9 +493,12 @@
     }
   }
   window.dsState = run;
+  Object.assign(window.__ds, { set, release, expr, look });
 
   // Something every 20-50 s
-  const weights = { look: 4, wave: 2, eat: 2, think: 2, shy: 1.5, busy: 1, sleepy: 1 };
+  const weights = { look: 3, lookAround: 3, sway: 2.5, curious: 2, wave: 2, eat: 2, think: 2,
+                    giggle: 1.5, shy: 1.5, yawn: 1, busy: 1, sleepy: 1,
+                    surprised: 0.8, angry: 0.6, scared: 0.5, sad: 0.4 };
   function pick() {
     const total = Object.values(weights).reduce((a, b) => a + b, 0);
     let r = Math.random() * total;
@@ -358,13 +513,14 @@
     }, rand(20000, 50000));
   })();
 
-  // Clicks: wave back; a burst of clicks gets her flustered
+  // Clicks: wave back; a burst of clicks gets her flustered, keep poking and she gets angry
   let clicks = [];
   app.canvas.addEventListener("pointerdown", () => {
     const t = now();
-    clicks = clicks.filter(c => t - c < 1.5).concat([t]);
-    if (clicks.length >= 3) { clicks = []; run("flustered"); }
-    else if (!busy) run("wave");
+    clicks = clicks.filter(c => t - c < 3).concat([t]);
+    if (clicks.length >= 6) { clicks = []; run("angry"); }
+    else if (clicks.length === 3) run("flustered");
+    else if (clicks.length === 1 && !busy) run(Math.random() < 0.2 ? "surprised" : "wave");
   });
 
   layout();

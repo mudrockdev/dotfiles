@@ -13,7 +13,9 @@ Usage: deepseek.py --x X --y Y [--layer bottom|top] [--height PX] [--framing upp
   --height  window height; the width follows the character's proportions
   --framing upper (head to hips, cut by the screen edge) or full (head to feet)
 
-stdin (one command per line): state <name> | layer bottom|top
+stdin (one command per line): state <name> | layer bottom|top | cursor X Y | cursor none
+  cursor: pointer position in global compositor coordinates while it is over the panel
+  (Wayland gives no global pointer position, so Quickshell forwards what it sees)
 """
 
 import argparse
@@ -42,6 +44,7 @@ from gi.repository import Gdk, GLib, Gtk, GtkLayerShell, WebKit2  # noqa: E402
 HERE = Path(__file__).resolve().parent
 DATA = Path.home() / ".var" / "deepseek-chan-live2d"
 CORE = DATA / "live2dcubismcore.min.js"
+RIGHT_MARGIN = 8
 
 
 def find_model():
@@ -83,10 +86,10 @@ class Character(Gtk.Window):
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.NONE)
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.BOTTOM, True)
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, True)
-        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 8)
-        monitor = self.pick_monitor(args.x, args.y)
-        if monitor:
-            GtkLayerShell.set_monitor(self, monitor)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, RIGHT_MARGIN)
+        self.monitor = self.pick_monitor(args.x, args.y)
+        if self.monitor:
+            GtkLayerShell.set_monitor(self, self.monitor)
 
         manager = WebKit2.UserContentManager()
         manager.add_script(WebKit2.UserScript(
@@ -132,6 +135,22 @@ class Character(Gtk.Window):
         region = cairo.Region([cairo.RectangleInt(*r) for r in rects]) if rects else cairo.Region()
         self.input_shape_combine_region(region)
 
+    def forward_cursor(self, args):
+        """Global pointer position -> page coordinates (the window sits in the monitor's
+        bottom-right corner, RIGHT_MARGIN from the edge)."""
+        if len(args) != 2:
+            pos = "null"
+        else:
+            monitor = self.monitor or Gdk.Display.get_default().get_monitor_at_window(self.get_window())
+            g = monitor.get_geometry()
+            w, h = self.get_allocated_width(), self.get_allocated_height()
+            x0, y0 = g.x + g.width - RIGHT_MARGIN - w, g.y + g.height - h
+            try:
+                pos = json.dumps([int(args[0]) - x0, int(args[1]) - y0])
+            except ValueError:
+                return
+        self.view.evaluate_javascript(f"window.dsCursor && dsCursor({pos})", -1, None, None, None, None, None)
+
     def on_message(self, _manager, result):
         try:
             msg = json.loads(result.get_js_value().to_string())
@@ -155,6 +174,8 @@ class Character(Gtk.Window):
             self.set_layer(parts[1])
         elif parts and parts[0] == "js" and os.environ.get("DS_DEBUG"):
             self.view.evaluate_javascript(line[3:], -1, None, None, None, None, None)
+        elif parts and parts[0] == "cursor":
+            self.forward_cursor(parts[1:])
         elif len(parts) == 2 and parts[0] == "state":
             self.view.evaluate_javascript(f"window.dsState && dsState({json.dumps(parts[1])})",
                                           -1, None, None, None, None, None)
