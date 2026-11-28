@@ -269,19 +269,20 @@
       if (Math.random() < 0.35) expr("脸红");
       await sleep(rand(4, 6));
     },
-    // Raises her hand and waves
+    // Greets the user: bright smile, happy head tilts and a little bounce.
+    // No arm: the model's only raised-hand pose is a pointing finger, which reads as
+    // pointing rather than waving.
     async wave(my) {
+      await setRight(null);
+      if (!alive(my)) return;
       look(0, 0.1);
       set("EyeSmile", 0.8); set("ParamMouthForm", 1); set("ParamMouthOpenY", 0.35);
-      // The model's own raised-hand pose; only head and body move on top of it
-      // (driving the arm/finger parameters from here looked unnatural)
-      await setRight("finger");
-      if (!alive(my)) return;
-      set("ParamAngleZ", t => 7 * Math.sin(t * 4.5), 3);
-      set("ParamBodyAngleZ", t => 3 * Math.sin(t * 4.5 - 0.5), 3);
-      set("ParamAngleY", t => 3 + 3 * Math.sin(t * 9), 3);
+      set("ParamAngleZ", t => 8 * Math.sin(t * 4), 3);
+      set("ParamBodyAngleZ", t => 2.5 * Math.sin(t * 4 - 0.5), 3);
+      set("ShoulderZ", t => 3 * Math.sin(t * 4 - 0.3), 3);
+      set("ParamAngleY", t => 3 + 3 * Math.sin(t * 8), 3);
       await sleep(2.4);
-      release("ParamAngleZ", "ParamBodyAngleZ", "ParamAngleY");
+      release("ParamAngleZ", "ParamBodyAngleZ", "ShoulderZ", "ParamAngleY");
       await sleep(0.4);
     },
     // Nibbles on a foxtail stalk
@@ -352,8 +353,7 @@
       for (const [x, y, d] of [[0.85 * first, 0.05, 1.6], [0.2 * first, -0.1, 0.5],
                                [-0.85 * first, 0.1, 1.6], [0, 0.05, 0.8]]) {
         if (!alive(my)) return;
-        look(x, y);
-        set("ParamBodyAngleX", x * 6, 2);
+        look(x, y);   // the focus controller eases head and eyes; no body turn
         await sleep(d);
       }
       if (alive(my) && Math.random() < 0.4) { expr("屑屑眼"); await sleep(1.5); }
