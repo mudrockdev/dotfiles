@@ -18,6 +18,8 @@ Singleton {
     // Uygulama menüsü (whisker): favoriler (null = paneldeki başlatıcılar) ve son kullanılanlar
     property alias menuFavorites: adapter.menuFavorites
     property alias recentApps: adapter.recentApps
+    // "list" | "grid"
+    property alias menuLayout: adapter.menuLayout
     // Dosya okunana kadar hiçbir şey yazılmaz; yoksa açılışta varsayılanlar kayıtlı ayarların üstüne yazılır
     property bool loaded: false
 
@@ -47,6 +49,7 @@ Singleton {
             property bool favoritesImported: false
             property var menuFavorites: null
             property var recentApps: []
+            property string menuLayout: "list"
         }
     }
 }

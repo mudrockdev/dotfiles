@@ -12,7 +12,7 @@ Singleton {
     readonly property var themes: [
         // icon: menüdeki kare ikon; logo: varsa başlatıcıda ikon yerine gösterilen geniş görsel
         { id: "default", name: "Default", icon: "view-app-grid-symbolic", colorize: true, logo: "" },
-        { id: "azurlane", name: "Azur Lane", icon: Qt.resolvedUrl("assets/al-anchor.svg"), colorize: false, logo: Qt.resolvedUrl("assets/al.svg") }
+        { id: "azurlane", name: "Azur Lane", icon: Qt.resolvedUrl("assets/al-anchor.svg"), colorize: false, logo: Qt.resolvedUrl("assets/al.svg"), logoAspect: 1660 / 964 }
     ]
     readonly property string name: Settings.theme
     readonly property bool azur: name === "azurlane"
@@ -20,6 +20,7 @@ Singleton {
     // Uygulama başlatıcı: logo varsa o, yoksa (boyanabilir) tema ikonu
     readonly property var current: themes.find(t => t.id === name) ?? themes[0]
     readonly property string launcherLogo: current.logo
+    readonly property real launcherLogoAspect: current.logoAspect ?? 1
     readonly property string launcherIcon: current.icon
     readonly property bool launcherIconColorize: current.colorize
 

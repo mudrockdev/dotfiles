@@ -26,8 +26,11 @@ BarButton {
     Image {
         visible: Theme.launcherLogo !== ""
         source: Theme.launcherLogo
+        // Boyut sabit en-boy oranından: implicitWidth'e bağlamak SVG'nin dev boyutta
+        // çizilmeye çalışılmasına yol açıyordu ("requested buffer size is too big").
         height: Config.barHeight - 4
-        width: implicitWidth > 0 ? height * implicitWidth / implicitHeight : height
+        width: Math.round(height * Theme.launcherLogoAspect)
+        sourceSize.width: width * 2
         sourceSize.height: height * 2
         fillMode: Image.PreserveAspectFit
         smooth: true
@@ -212,19 +215,39 @@ BarButton {
         property string category: "favorites"
         readonly property string query: searchInput.text.trim()
         readonly property var shown: query !== "" ? root.search(query) : root.appsFor(category)
+        readonly property bool grid: Settings.menuLayout === "grid"
+        readonly property var view: grid ? appGrid : appList
+        readonly property int cols: Math.max(1, Math.floor(appGrid.width / appGrid.cellWidth))
+
+        function setLayout(l) {
+            if (Settings.loaded)
+                Settings.menuLayout = l;
+            searchInput.forceActiveFocus();
+        }
+        function move(delta) {
+            const v = menu.view;
+            if (v.count > 0)
+                v.currentIndex = Math.max(0, Math.min(v.count - 1, v.currentIndex + delta));
+        }
 
         onVisibleChanged: {
             if (visible) {
                 searchInput.text = "";
                 menu.category = root.favEntries.length > 0 ? "favorites" : "all";
                 appList.currentIndex = 0;
+                appGrid.currentIndex = 0;
                 appList.positionViewAtBeginning();
+                appGrid.positionViewAtBeginning();
                 Qt.callLater(() => searchInput.forceActiveFocus());
             } else {
                 ctx.close();
             }
         }
-        onShownChanged: appList.currentIndex = 0
+        onShownChanged: {
+            appList.currentIndex = 0;
+            appGrid.currentIndex = 0;
+        }
+        onGridChanged: menu.view.currentIndex = 0
 
         Item {
             id: body
@@ -282,6 +305,27 @@ BarButton {
                         Layout.fillWidth: true
                     }
 
+                    IconBtn {
+                        icon: "view-list-symbolic"
+                        fallback: "view-list-details-symbolic"
+                        tip: "List view"
+                        checked: !menu.grid
+                        onClicked: menu.setLayout("list")
+                    }
+                    IconBtn {
+                        icon: "view-grid-symbolic"
+                        fallback: "view-app-grid-symbolic"
+                        tip: "Grid view"
+                        checked: menu.grid
+                        onClicked: menu.setLayout("grid")
+                    }
+                    Rectangle {
+                        implicitWidth: 1
+                        implicitHeight: 18
+                        Layout.leftMargin: 2
+                        Layout.rightMargin: 2
+                        color: Theme.separator
+                    }
                     IconBtn {
                         icon: "preferences-system-symbolic"
                         tip: "All Settings"
@@ -342,24 +386,32 @@ BarButton {
                         }
 
                         Keys.onPressed: event => {
-                            const n = appList.count;
+                            const n = menu.view.count;
+                            const step = menu.grid ? menu.cols : 1;
                             switch (event.key) {
                             case Qt.Key_Down:
-                                appList.currentIndex = Math.min(n - 1, appList.currentIndex + 1);
+                                menu.move(step);
                                 break;
                             case Qt.Key_Up:
-                                appList.currentIndex = Math.max(0, appList.currentIndex - 1);
+                                menu.move(-step);
+                                break;
+                            case Qt.Key_Right:
+                            case Qt.Key_Left:
+                                // Izgarada ←/→ yalnızca arama kutusu boşken gezinir
+                                if (!menu.grid || searchInput.text !== "")
+                                    return;
+                                menu.move(event.key === Qt.Key_Right ? 1 : -1);
                                 break;
                             case Qt.Key_PageDown:
-                                appList.currentIndex = Math.min(n - 1, appList.currentIndex + 10);
+                                menu.move(step * (menu.grid ? 4 : 10));
                                 break;
                             case Qt.Key_PageUp:
-                                appList.currentIndex = Math.max(0, appList.currentIndex - 10);
+                                menu.move(-step * (menu.grid ? 4 : 10));
                                 break;
                             case Qt.Key_Return:
                             case Qt.Key_Enter:
                                 if (n > 0)
-                                    root.launch(menu.shown[Math.max(0, appList.currentIndex)]);
+                                    root.launch(menu.shown[Math.max(0, menu.view.currentIndex)]);
                                 break;
                             case Qt.Key_Escape:
                                 if (ctx.visible)
@@ -400,6 +452,7 @@ BarButton {
                         ListView {
                             id: appList
                             anchors.fill: parent
+                            visible: !menu.grid
                             clip: true
                             model: menu.shown
                             boundsBehavior: Flickable.StopAtBounds
@@ -474,9 +527,89 @@ BarButton {
                             }
                         }
 
+                        // Izgara görünümü
+                        GridView {
+                            id: appGrid
+                            anchors.fill: parent
+                            visible: menu.grid
+                            clip: true
+                            model: menu.shown
+                            boundsBehavior: Flickable.StopAtBounds
+                            highlightMoveDuration: 0
+                            currentIndex: 0
+                            // Sütunlar genişliği tam doldursun
+                            cellWidth: Math.floor(width / Math.max(1, Math.floor(width / 104)))
+                            cellHeight: 92
+
+                            delegate: Item {
+                                id: cell
+                                required property var modelData
+                                required property int index
+                                width: GridView.view.cellWidth
+                                height: GridView.view.cellHeight
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    anchors.margins: 2
+                                    radius: Theme.radius
+                                    color: cellMa.pressed ? Theme.pressed : cell.GridView.isCurrentItem ? Theme.hover : "transparent"
+
+                                    Icon {
+                                        id: cellIcon
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        y: 10
+                                        size: 40
+                                        colorize: false
+                                        icon: cell.modelData.icon
+                                        fallback: "application-x-executable"
+                                    }
+                                    Icon {
+                                        visible: menu.category !== "favorites" && root.isFav(cell.modelData)
+                                        anchors.right: parent.right
+                                        anchors.top: parent.top
+                                        anchors.margins: 5
+                                        icon: "starred-symbolic"
+                                        size: 10
+                                        color: Theme.fgDim
+                                    }
+                                    Label {
+                                        anchors.top: cellIcon.bottom
+                                        anchors.topMargin: 6
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.leftMargin: 4
+                                        anchors.rightMargin: 4
+                                        horizontalAlignment: Text.AlignHCenter
+                                        text: cell.modelData.name
+                                        wrapMode: Text.Wrap
+                                        maximumLineCount: 2
+                                        elide: Text.ElideRight
+                                        font.pixelSize: Theme.fontSize - 1
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: cellMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                    onPositionChanged: appGrid.currentIndex = cell.index
+                                    onEntered: appGrid.currentIndex = cell.index
+                                    onClicked: mouse => {
+                                        if (mouse.button === Qt.RightButton) {
+                                            const p = mapToItem(body, mouse.x, mouse.y);
+                                            ctx.show(cell.modelData, p.x, p.y);
+                                        } else {
+                                            root.launch(cell.modelData);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         Label {
                             anchors.centerIn: parent
-                            visible: appList.count === 0
+                            visible: menu.shown.length === 0
                             color: Theme.fgDim
                             text: menu.query !== "" ? "No applications found" : menu.category === "favorites" ? "Right-click an application to add it to favorites" : menu.category === "recent" ? "No recently used applications" : "No applications"
                         }
@@ -636,6 +769,7 @@ BarButton {
             searchInput.text = "";
             menu.category = id;
             appList.positionViewAtBeginning();
+            appGrid.positionViewAtBeginning();
         }
     }
 
@@ -644,17 +778,21 @@ BarButton {
         id: btn
         property string icon: ""
         property string tip: ""
+        property string fallback: "image-missing"
+        property bool checked: false
         property int size: 30
         signal clicked
 
         implicitWidth: size
         implicitHeight: size
         radius: size / 2
-        color: btnMa.pressed ? Theme.pressed : btnMa.containsMouse ? Theme.hover : "transparent"
+        color: btnMa.pressed ? Theme.pressed : btn.checked ? Qt.alpha(Theme.accent, 0.30) : btnMa.containsMouse ? Theme.hover : "transparent"
 
         Icon {
             anchors.centerIn: parent
             icon: btn.icon
+            fallback: btn.fallback
+            color: btn.checked ? Theme.accent : Theme.fg
         }
         MouseArea {
             id: btnMa
