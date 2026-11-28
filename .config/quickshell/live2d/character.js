@@ -139,6 +139,9 @@
         rects.push([start * CELL, r * CELL, (c - start) * CELL, CELL]);
       }
     }
+    // The debug menu (when open) must be clickable too
+    const mr = menuRect();
+    if (mr) rects.push(mr);
     const key = JSON.stringify(rects);
     if (force || key !== lastInput) {
       lastInput = key;
@@ -197,18 +200,19 @@
   function look(x, y) { lookOverride = { x, y }; focus(x, y); }
   function unlook() { lookOverride = null; wander(); }
 
-  // Looks toward a point in window coordinates (may be far outside the window)
-  function lookToward(x, y) {
+  // Looks toward a point in window coordinates (may be far outside the window).
+  // near: the pointer is over her (smoother 30 fps); far moves keep the idle frame rate.
+  function lookToward(x, y, near) {
     hoverUntil = now() + 1.2;
-    fast(1.5);
+    if (near) fast(1.5);
     if (lookOverride) return;
     const dx = x - head.x, dy = head.y - y;
     const d = Math.hypot(dx, dy) || 1;
     const k = Math.min(1, d / 260) / d;   // full turn from 260 px away, direction kept
     focus(dx * k, dy * k);
   }
-  app.canvas.addEventListener("pointermove", e => lookToward(e.clientX, e.clientY));
-  // Pointer over the panel or its menus, forwarded by Quickshell (null = left)
+  app.canvas.addEventListener("pointermove", e => lookToward(e.clientX, e.clientY, true));
+  // Pointer anywhere on screen, from deepseek.py (null = on no output)
   window.dsCursor = p => {
     if (p) lookToward(p[0], p[1]);
     else { hoverUntil = 0; wander(); }
@@ -470,6 +474,33 @@
       await sleep(rand(4.5, 6.5));
       eyeOpen = 1;
     },
+    // Happy ear flaps: quick ups and downs, blushing, eyes smiling, a little bounce
+    async earFlap(my) {
+      expr("脸红");
+      look(0, 0.1);
+      set("EyeSmile", 1, 8);
+      eyeOpen = 0.2;
+      set("ParamMouthForm", 1, 8);
+      set("ParamMouthOpenY", 0.3, 8);
+      const flaps = Math.round(rand(3, 5));
+      const hz = 2.4, t0 = now(), dur = flaps / hz;
+      // 0 → up → 0, `flaps` times; the tips (Ear2/3) trail a little for a springy look
+      const wave = lag => t => {
+        const u = t - t0 - lag;
+        return u < 0 || u > dur ? 0 : Math.sin(Math.PI * hz * u) ** 2;
+      };
+      set("LControl", t => wave(0)(t), 15); set("RControl", t => wave(0.03)(t), 15);
+      set("LEar1", t => wave(0.05)(t), 15); set("REar1", t => wave(0.08)(t), 15);
+      set("LEar2", t => wave(0.1)(t), 15); set("REar2", t => wave(0.13)(t), 15);
+      set("LEar3", t => wave(0.15)(t), 15); set("REar3", t => wave(0.18)(t), 15);
+      set("ParamAngleY", t => 4 * wave(0)(t), 12);
+      set("ShoulderY", t => 3 * wave(0.04)(t), 12);
+      await sleep(dur + 0.2);
+      release("LControl", "RControl", "LEar1", "REar1", "LEar2", "REar2", "LEar3", "REar3",
+              "ParamAngleY", "ShoulderY");
+      await sleep(rand(1, 1.6));
+      eyeOpen = 1;
+    },
     // Clicked several times: flustered (rarely: a bowl falls on her head)
     async flustered(my) {
       expr(Math.random() < 0.12 ? "钢盆" : "＞＜");
@@ -497,7 +528,7 @@
 
   // Something every 20-50 s
   const weights = { look: 3, lookAround: 3, sway: 2.5, curious: 2, wave: 2, eat: 2, think: 2,
-                    giggle: 1.5, shy: 1.5, yawn: 1, busy: 1, sleepy: 1,
+                    giggle: 1.5, earFlap: 1.5, shy: 1.5, yawn: 1, busy: 1, sleepy: 1,
                     surprised: 0.8, angry: 0.6, scared: 0.5, sad: 0.4 };
   function pick() {
     const total = Object.values(weights).reduce((a, b) => a + b, 0);
@@ -515,13 +546,75 @@
 
   // Clicks: wave back; a burst of clicks gets her flustered, keep poking and she gets angry
   let clicks = [];
-  app.canvas.addEventListener("pointerdown", () => {
+  app.canvas.addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    if (menu.open) { closeMenu(); return; }
     const t = now();
     clicks = clicks.filter(c => t - c < 3).concat([t]);
     if (clicks.length >= 6) { clicks = []; run("angry"); }
     else if (clicks.length === 3) run("flustered");
     else if (clicks.length === 1 && !busy) run(Math.random() < 0.2 ? "surprised" : "wave");
   });
+
+  // ---------------- Debug menu (right click, when enabled in the panel) ----------------
+  // Lists every state; picking one cancels whatever is running.
+  const LABELS = {
+    look: "Look at you", lookAround: "Look around", wave: "Wave", sway: "Sway", curious: "Curious",
+    giggle: "Giggle", earFlap: "Ear flaps", shy: "Shy", eat: "Eat", think: "Think", busy: "Server busy",
+    yawn: "Yawn", sleepy: "Sleepy", surprised: "Surprised", angry: "Angry", scared: "Scared",
+    sad: "Sad", flustered: "Flustered",
+  };
+  let debug = !!cfg.debug;
+  window.dsDebug = on => { debug = !!on; if (!debug) closeMenu(); };
+  const menu = { el: document.createElement("div"), open: false };
+  menu.el.id = "menu";
+  document.body.appendChild(menu.el);
+  function addItem(label, onClick, cls) {
+    const b = document.createElement("div");
+    b.className = "item" + (cls ? " " + cls : "");
+    b.textContent = label;
+    b.addEventListener("pointerdown", e => { e.stopPropagation(); if (e.button === 0) { closeMenu(); onClick(); } });
+    menu.el.appendChild(b);
+  }
+  addItem("DeepSeek debug", () => {}, "title");
+  for (const name of Object.keys(states))
+    addItem(LABELS[name] ?? name, () => run(name));
+  addItem("Stop (calm)", () => stop(), "wide");
+  function menuRect() {
+    if (!menu.open) return null;
+    const r = menu.el.getBoundingClientRect();
+    return [Math.floor(r.left), Math.floor(r.top), Math.ceil(r.width), Math.ceil(r.height)];
+  }
+  function openMenu(x, y) {
+    menu.el.style.display = "grid";
+    const w = menu.el.offsetWidth, h = menu.el.offsetHeight;
+    menu.el.style.left = clamp(x, 2, window.innerWidth - w - 2) + "px";
+    menu.el.style.top = clamp(y, 2, window.innerHeight - h - 2) + "px";
+    menu.open = true;
+    sendInput(true);
+  }
+  function closeMenu() {
+    if (!menu.open) return;
+    menu.open = false;
+    menu.el.style.display = "none";
+    sendInput(true);
+  }
+  // Cancel the running state without starting another
+  async function stop() {
+    const my = ++token;
+    busy = true;
+    await calm();
+    if (alive(my)) busy = false;
+  }
+  app.canvas.addEventListener("contextmenu", e => e.preventDefault());
+  menu.el.addEventListener("contextmenu", e => e.preventDefault());
+  app.canvas.addEventListener("pointerdown", e => {
+    if (e.button === 2 && debug) openMenu(e.clientX, e.clientY);
+  });
+  // The menu can't see clicks outside this window: close it when the pointer leaves
+  let leaveTimer = 0;
+  document.addEventListener("mouseleave", () => { leaveTimer = setTimeout(closeMenu, 800); });
+  document.addEventListener("mouseenter", () => clearTimeout(leaveTimer));
 
   layout();
   window.addEventListener("resize", layout);

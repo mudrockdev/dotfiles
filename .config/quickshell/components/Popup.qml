@@ -53,23 +53,6 @@ PopupWindow {
         border.color: Theme.border
         border.width: 1
 
-        // İmleç menüdeyken DeepSeek-chan bakışlarıyla takip eder. Menünün gerçek konumu
-        // okunamıyor: bağlandığı öğenin altında ortalanmış varsayılır (Slide ile kenara yaslanır).
-        HoverHandler {
-            onPointChanged: {
-                if (!hovered || !root.anchorItem)
-                    return;
-                const win = root.anchorItem.QsWindow.window;
-                if (!win)
-                    return;
-                const a = root.anchorItem.mapToItem(null, root.anchorItem.width / 2, root.anchorItem.height);
-                const x0 = Math.max(0, Math.min(win.width - root.width, a.x - root.width / 2));
-                DeepSeek.cursorAt(win.screen, x0 + point.position.x, a.y + 4 + point.position.y);
-            }
-            onHoveredChanged: if (!hovered)
-                DeepSeek.cursorLeft()
-        }
-
         ColumnLayout {
             id: layout
             anchors.fill: parent

@@ -8,14 +8,15 @@ this script only owns the window.
 Model and Cubism Core are NOT part of this repo. They are read from
 ~/.var/deepseek-chan-live2d/ (DeepSeek/*.model3.json and live2dcubismcore.min.js).
 
-Usage: deepseek.py --x X --y Y [--layer bottom|top] [--height PX] [--framing upper|full]
+Usage: deepseek.py --x X --y Y [--layer bottom|top] [--height PX] [--framing upper|full] [--debug]
   --x/--y   top-left of the target monitor in compositor space (used to pick the monitor)
   --height  window height; the width follows the character's proportions
   --framing upper (head to hips, cut by the screen edge) or full (head to feet)
 
-stdin (one command per line): state <name> | layer bottom|top | cursor X Y | cursor none
-  cursor: pointer position in global compositor coordinates while it is over the panel
-  (Wayland gives no global pointer position, so Quickshell forwards what it sees)
+stdin (one command per line): state <name> | layer bottom|top | debug on|off
+
+She follows the pointer anywhere on screen (pointer.py, via the compositor's
+ext-image-copy-capture cursor sessions; no image is captured).
 """
 
 import argparse
@@ -41,6 +42,9 @@ gi.require_version("GtkLayerShell", "0.1")
 gi.require_version("WebKit2", "4.1")
 from gi.repository import Gdk, GLib, Gtk, GtkLayerShell, WebKit2  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from pointer import PointerWatch  # noqa: E402
+
 HERE = Path(__file__).resolve().parent
 DATA = Path.home() / ".var" / "deepseek-chan-live2d"
 CORE = DATA / "live2dcubismcore.min.js"
@@ -52,7 +56,7 @@ def find_model():
     return Path(found[0]) if found else None
 
 
-def build_config(model, framing):
+def build_config(model, framing, debug):
     """Model manifest with the motions/expressions VTube Studio keeps outside model3.json."""
     base = model.parent
     settings = json.loads(model.read_text(encoding="utf-8"))
@@ -66,7 +70,7 @@ def build_config(model, framing):
         for f in sorted(glob.glob(str(base / "**" / "*.exp3.json"), recursive=True))
     ]
     settings["url"] = model.as_uri()
-    return {"settings": settings, "core": CORE.as_uri(), "framing": framing}
+    return {"settings": settings, "core": CORE.as_uri(), "framing": framing, "debug": debug}
 
 
 class Character(Gtk.Window):
@@ -115,6 +119,14 @@ class Character(Gtk.Window):
         self.connect("realize", lambda *_: self.set_input([]))
         self.view.load_uri((HERE / "index.html").as_uri())
 
+        self.pointer = None
+        self.pointer_timer = None
+        self.sent_pointer = None
+        try:
+            self.pointer_watch = PointerWatch(self.on_pointer)
+        except OSError as e:
+            print("deepseek: no global pointer tracking:", e, file=sys.stderr)
+
         GLib.io_add_watch(GLib.IOChannel.unix_new(sys.stdin.fileno()),
                           GLib.PRIORITY_DEFAULT, GLib.IO_IN | GLib.IO_HUP, self.on_stdin)
 
@@ -135,21 +147,27 @@ class Character(Gtk.Window):
         region = cairo.Region([cairo.RectangleInt(*r) for r in rects]) if rects else cairo.Region()
         self.input_shape_combine_region(region)
 
-    def forward_cursor(self, args):
-        """Global pointer position -> page coordinates (the window sits in the monitor's
-        bottom-right corner, RIGHT_MARGIN from the edge)."""
-        if len(args) != 2:
+    def on_pointer(self, x, y):
+        """Global pointer position (None = on no output); sent to the page at most ~30x/s."""
+        self.pointer = None if x is None else (x, y)
+        if self.pointer_timer is None:
+            self.pointer_timer = GLib.timeout_add(33, self.flush_pointer)
+
+    def flush_pointer(self):
+        self.pointer_timer = None
+        if self.pointer is None:
             pos = "null"
         else:
+            # The window sits in its monitor's bottom-right corner, RIGHT_MARGIN from the edge
             monitor = self.monitor or Gdk.Display.get_default().get_monitor_at_window(self.get_window())
             g = monitor.get_geometry()
             w, h = self.get_allocated_width(), self.get_allocated_height()
             x0, y0 = g.x + g.width - RIGHT_MARGIN - w, g.y + g.height - h
-            try:
-                pos = json.dumps([int(args[0]) - x0, int(args[1]) - y0])
-            except ValueError:
-                return
-        self.view.evaluate_javascript(f"window.dsCursor && dsCursor({pos})", -1, None, None, None, None, None)
+            pos = json.dumps([round(self.pointer[0] - x0), round(self.pointer[1] - y0)])
+        if pos != self.sent_pointer:
+            self.sent_pointer = pos
+            self.view.evaluate_javascript(f"window.dsCursor && dsCursor({pos})", -1, None, None, None, None, None)
+        return False
 
     def on_message(self, _manager, result):
         try:
@@ -174,8 +192,9 @@ class Character(Gtk.Window):
             self.set_layer(parts[1])
         elif parts and parts[0] == "js" and os.environ.get("DS_DEBUG"):
             self.view.evaluate_javascript(line[3:], -1, None, None, None, None, None)
-        elif parts and parts[0] == "cursor":
-            self.forward_cursor(parts[1:])
+        elif len(parts) == 2 and parts[0] == "debug":
+            self.view.evaluate_javascript(f"window.dsDebug && dsDebug({json.dumps(parts[1] == 'on')})",
+                                          -1, None, None, None, None, None)
         elif len(parts) == 2 and parts[0] == "state":
             self.view.evaluate_javascript(f"window.dsState && dsState({json.dumps(parts[1])})",
                                           -1, None, None, None, None, None)
@@ -189,6 +208,7 @@ def main():
     p.add_argument("--layer", choices=["bottom", "top"], default="bottom")
     p.add_argument("--height", type=int, default=560)
     p.add_argument("--framing", choices=["upper", "full"], default="upper")
+    p.add_argument("--debug", action="store_true", help="right-click menu to trigger animations")
     args = p.parse_args()
 
     model = find_model()
@@ -196,7 +216,7 @@ def main():
         print(f"deepseek: model or Cubism Core missing in {DATA}", file=sys.stderr)
         sys.exit(2)
 
-    win = Character(args, build_config(model, args.framing))
+    win = Character(args, build_config(model, args.framing, args.debug))
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
     Gtk.main()

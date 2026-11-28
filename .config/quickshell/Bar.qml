@@ -28,14 +28,6 @@ PanelWindow {
         id: content
         anchors.fill: parent
 
-        // İmleç paneldeyken DeepSeek-chan bakışlarıyla takip eder (pasif; tıklamaları etkilemez)
-        HoverHandler {
-            onPointChanged: if (hovered)
-                DeepSeek.cursorAt(bar.screen, point.position.x, point.position.y)
-            onHoveredChanged: if (!hovered)
-                DeepSeek.cursorLeft()
-        }
-
         // Boş alana tıklama: sol = açık popup'ı kapat, sağ = panel menüsü
         MouseArea {
             anchors.fill: parent
@@ -205,6 +197,15 @@ PanelWindow {
                         subtitle: Settings.deepseekOverApps ? "Always on top of windows" : "Only on the desktop, behind windows"
                         checked: Settings.deepseekOverApps
                         onToggled: Settings.deepseekOverApps = !Settings.deepseekOverApps
+                    }
+                    Toggle {
+                        visible: DeepSeek.enabled
+                        text: "DeepSeek debug"
+                        icon: "applications-debugging-symbolic"
+                        bold: false
+                        subtitle: "Right-click her to trigger any animation"
+                        checked: Settings.deepseekDebug
+                        onToggled: Settings.deepseekDebug = !Settings.deepseekDebug
                     }
                     SectionTitle {
                         visible: DeepSeek.enabled

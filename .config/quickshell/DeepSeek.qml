@@ -55,7 +55,7 @@ Singleton {
 
     Process {
         id: helper
-        command: ["python3", root.dir + "/deepseek.py", "--x", String(root.screen?.x ?? 0), "--y", String(root.screen?.y ?? 0), "--height", String(root.height), "--framing", fullBody ? "full" : "upper", "--layer", Settings.deepseekOverApps ? "top" : "bottom"]
+        command: ["python3", root.dir + "/deepseek.py", "--x", String(root.screen?.x ?? 0), "--y", String(root.screen?.y ?? 0), "--height", String(root.height), "--framing", fullBody ? "full" : "upper", "--layer", Settings.deepseekOverApps ? "top" : "bottom"].concat(Settings.deepseekDebug ? ["--debug"] : [])
         // stdin açık kalmalı: kapanınca yardımcı çıkar (Quickshell kapanınca o da kapanır)
         stdinEnabled: true
         // Yalnızca sayfadaki hatalar günlüğe gitsin
@@ -96,39 +96,9 @@ Singleton {
             if (helper.running)
                 helper.write("layer " + (Settings.deepseekOverApps ? "top" : "bottom") + "\n");
         }
-    }
-
-    // İmleç panelin / menülerin üstündeyken (bizim pencerelerimiz) gözleriyle takip etsin.
-    // Wayland başka pencerelerdeki imleç konumunu vermez; yalnızca buralarda bilinir.
-    // Konum küresel (bileşikleştirici) koordinatlarda; en fazla ~20 kez/sn gönderilir.
-    property point cursorPos
-    property bool cursorInside: false
-    property bool cursorDirty: false
-    function cursorAt(screen, x, y) {
-        if (!helper.running || !screen)
-            return;
-        cursorPos = Qt.point(screen.x + x, screen.y + y);
-        cursorInside = true;
-        cursorDirty = true;
-        if (!cursorTimer.running)
-            cursorTimer.start();
-    }
-    function cursorLeft() {
-        if (!cursorInside)
-            return;
-        cursorInside = false;
-        cursorDirty = true;
-        if (!cursorTimer.running)
-            cursorTimer.start();
-    }
-    Timer {
-        id: cursorTimer
-        interval: 50
-        onTriggered: {
-            if (!root.cursorDirty || !helper.running)
-                return;
-            root.cursorDirty = false;
-            helper.write(root.cursorInside ? `cursor ${Math.round(root.cursorPos.x)} ${Math.round(root.cursorPos.y)}\n` : "cursor none\n");
+        function onDeepseekDebugChanged() {
+            if (helper.running)
+                helper.write("debug " + (Settings.deepseekDebug ? "on" : "off") + "\n");
         }
     }
 
