@@ -24,9 +24,12 @@ Singleton {
         return Quickshell.screens.find(s => s.name === want) ?? Quickshell.screens[0] ?? null;
     }
     readonly property bool enabled: Settings.deepseek && available && screen !== null
-    readonly property int height: ({ small: 420, medium: 560, large: 720 })[Settings.deepseekSize] ?? 560
+    readonly property bool fullBody: Settings.deepseekFraming === "full"
+    // Pencere yüksekliği. Üst gövdede karakter aynı yükseklikte ~1.7 kat büyük görünür;
+    // boyutlar yine de biraz daha büyük tutulur.
+    readonly property int height: (fullBody ? { small: 420, medium: 560, large: 720 } : { small: 380, medium: 480, large: 600 })[Settings.deepseekSize] ?? 480
     // Bunlar değişince yardımcı yeniden başlar (katman değişimi stdin'den gider)
-    readonly property string launchKey: enabled ? [screen.x, screen.y, height].join(",") : ""
+    readonly property string launchKey: enabled ? [screen.x, screen.y, height, Settings.deepseekFraming].join(",") : ""
 
     function check() {
         checker.running = true;
@@ -52,7 +55,7 @@ Singleton {
 
     Process {
         id: helper
-        command: ["python3", root.dir + "/deepseek.py", "--x", String(root.screen?.x ?? 0), "--y", String(root.screen?.y ?? 0), "--height", String(root.height), "--layer", Settings.deepseekOverApps ? "top" : "bottom"]
+        command: ["python3", root.dir + "/deepseek.py", "--x", String(root.screen?.x ?? 0), "--y", String(root.screen?.y ?? 0), "--height", String(root.height), "--framing", fullBody ? "full" : "upper", "--layer", Settings.deepseekOverApps ? "top" : "bottom"]
         // stdin açık kalmalı: kapanınca yardımcı çıkar (Quickshell kapanınca o da kapanır)
         stdinEnabled: true
         // Yalnızca sayfadaki hatalar günlüğe gitsin

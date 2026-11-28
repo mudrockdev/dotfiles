@@ -200,6 +200,22 @@ PanelWindow {
                     }
                     SectionTitle {
                         visible: DeepSeek.enabled
+                        text: "Framing"
+                    }
+                    Repeater {
+                        model: DeepSeek.enabled ? [["upper", "Upper body", "Head to hips, larger"], ["full", "Full body", "Head to feet"]] : []
+
+                        delegate: MenuItem {
+                            required property var modelData
+                            text: modelData[1]
+                            secondary: modelData[2]
+                            icon: modelData[0] === "upper" ? "avatar-default-symbolic" : "system-users-symbolic"
+                            checked: Settings.deepseekFraming === modelData[0]
+                            onTriggered: Settings.deepseekFraming = modelData[0]
+                        }
+                    }
+                    SectionTitle {
+                        visible: DeepSeek.enabled
                         text: "Size"
                     }
                     Repeater {

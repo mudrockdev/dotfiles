@@ -8,9 +8,10 @@ this script only owns the window.
 Model and Cubism Core are NOT part of this repo. They are read from
 ~/.var/deepseek-chan-live2d/ (DeepSeek/*.model3.json and live2dcubismcore.min.js).
 
-Usage: deepseek.py --x X --y Y [--layer bottom|top] [--height PX]
+Usage: deepseek.py --x X --y Y [--layer bottom|top] [--height PX] [--framing upper|full]
   --x/--y   top-left of the target monitor in compositor space (used to pick the monitor)
   --height  window height; the width follows the character's proportions
+  --framing upper (head to hips, cut by the screen edge) or full (head to feet)
 
 stdin (one command per line): state <name> | layer bottom|top
 """
@@ -48,7 +49,7 @@ def find_model():
     return Path(found[0]) if found else None
 
 
-def build_config(model):
+def build_config(model, framing):
     """Model manifest with the motions/expressions VTube Studio keeps outside model3.json."""
     base = model.parent
     settings = json.loads(model.read_text(encoding="utf-8"))
@@ -62,7 +63,7 @@ def build_config(model):
         for f in sorted(glob.glob(str(base / "**" / "*.exp3.json"), recursive=True))
     ]
     settings["url"] = model.as_uri()
-    return {"settings": settings, "core": CORE.as_uri()}
+    return {"settings": settings, "core": CORE.as_uri(), "framing": framing}
 
 
 class Character(Gtk.Window):
@@ -73,7 +74,8 @@ class Character(Gtk.Window):
         if visual:
             self.set_visual(visual)
         # Layer surfaces ignore the default size and a WebView has no natural size
-        self.set_size_request(round(args.height * 0.62), args.height)
+        ratio = 0.62 if args.framing == "full" else 0.9
+        self.set_size_request(round(args.height * ratio), args.height)
 
         GtkLayerShell.init_for_window(self)
         GtkLayerShell.set_namespace(self, "quickshell-deepseek")
@@ -165,6 +167,7 @@ def main():
     p.add_argument("--y", type=int, default=0)
     p.add_argument("--layer", choices=["bottom", "top"], default="bottom")
     p.add_argument("--height", type=int, default=560)
+    p.add_argument("--framing", choices=["upper", "full"], default="upper")
     args = p.parse_args()
 
     model = find_model()
@@ -172,7 +175,7 @@ def main():
         print(f"deepseek: model or Cubism Core missing in {DATA}", file=sys.stderr)
         sys.exit(2)
 
-    win = Character(args, build_config(model))
+    win = Character(args, build_config(model, args.framing))
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
     Gtk.main()

@@ -33,6 +33,8 @@ Singleton {
     property alias deepseekOverApps: adapter.deepseekOverApps
     // "small" | "medium" | "large"
     property alias deepseekSize: adapter.deepseekSize
+    // "upper" (belden yukarısı, ekran kenarı keser) | "full" (tüm boy)
+    property alias deepseekFraming: adapter.deepseekFraming
     // Dosya okunana kadar hiçbir şey yazılmaz; yoksa açılışta varsayılanlar kayıtlı ayarların üstüne yazılır
     property bool loaded: false
 
@@ -71,6 +73,7 @@ Singleton {
             property string deepseekScreen: ""
             property bool deepseekOverApps: false
             property string deepseekSize: "medium"
+            property string deepseekFraming: "upper"
         }
     }
 }

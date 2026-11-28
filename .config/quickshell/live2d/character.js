@@ -63,28 +63,44 @@
 
   // ---------------- Layout ----------------
   // The model canvas is mostly empty: fit the drawn area, feet on the window's bottom.
-  function drawnBounds() {
+  // maxY: only drawables that end above it (to measure the upper body alone)
+  function drawnBounds(maxY = Infinity) {
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     for (let i = 0; i < cm.getDrawableCount(); i++) {
       if (!cm.getDrawableDynamicFlagIsVisible(i) || cm.getDrawableOpacity(i) < 0.3)
         continue;
       const b = im.getDrawableBounds(i);
+      if (b.y + b.height > maxY)
+        continue;
       x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y);
       x1 = Math.max(x1, b.x + b.width); y1 = Math.max(y1, b.y + b.height);
     }
     return { x0, y0, x1, y1 };
   }
-  let body = null;   // drawn area at rest, model canvas coordinates
+  // "upper": head to hips, cut by the screen edge; "full": head to feet (and tail)
+  const UPPER = 0.5;    // share of the full height shown in upper-body framing
+  let body = null;      // drawn area at rest, model canvas coordinates
+  let upper = null;     // drawn area of the upper body (centres the framing)
   let head = { x: 0, y: 0 };  // window coordinates
   function layout() {
     const w = window.innerWidth, h = window.innerHeight;
     body = body ?? drawnBounds();
-    const bw = body.x1 - body.x0, bh = body.y1 - body.y0;
-    const s = Math.min((h * 0.95) / bh, (w * 0.98) / bw);
+    const bh = body.y1 - body.y0;
+    upper = upper ?? drawnBounds(body.y0 + bh * UPPER);
+    let s;
     model.anchor.set(0, 0);
+    if (cfg.framing === "full") {
+      const bw = body.x1 - body.x0;
+      s = Math.min((h * 0.95) / bh, (w * 0.98) / bw);
+      model.position.set(w / 2 - (body.x0 + bw / 2) * s, h - 2 - body.y1 * s);
+    } else {
+      s = (h * 0.96) / (bh * UPPER);
+      const cx = (upper.x0 + upper.x1) / 2;
+      model.position.set(w / 2 - cx * s, h - (body.y0 + bh * UPPER) * s);
+    }
     model.scale.set(s);
-    model.position.set(w / 2 - (body.x0 + bw / 2) * s, h - 2 - body.y1 * s);
-    const hp = model.toGlobal(new PIXI.Point(body.x0 + bw * 0.5, body.y0 + bh * 0.2));
+    const cx = (upper.x0 + upper.x1) / 2;
+    const hp = model.toGlobal(new PIXI.Point(cx, body.y0 + bh * 0.2));
     head = { x: hp.x, y: hp.y };
     sendInput(true);
   }
@@ -243,14 +259,15 @@
     async wave(my) {
       look(0, 0.1);
       set("EyeSmile", 0.8); set("ParamMouthForm", 1); set("ParamMouthOpenY", 0.35);
+      // The model's own raised-hand pose; only head and body move on top of it
+      // (driving the arm/finger parameters from here looked unnatural)
       await setRight("finger");
       if (!alive(my)) return;
-      set("Param43", 1, 8);  // open fingers
-      set("Param41", t => 0.72 + 0.2 * Math.sin(t * 10), 6);
-      set("Param42", t => 0.4 * Math.sin(t * 10 + 0.7), 6);
-      set("ParamAngleZ", t => 6 * Math.sin(t * 5), 3);
-      await sleep(2.6);
-      release("Param41", "Param42", "Param43", "ParamAngleZ");
+      set("ParamAngleZ", t => 7 * Math.sin(t * 4.5), 3);
+      set("ParamBodyAngleZ", t => 3 * Math.sin(t * 4.5 - 0.5), 3);
+      set("ParamAngleY", t => 3 + 3 * Math.sin(t * 9), 3);
+      await sleep(2.4);
+      release("ParamAngleZ", "ParamBodyAngleZ", "ParamAngleY");
       await sleep(0.4);
     },
     // Nibbles on a foxtail stalk
