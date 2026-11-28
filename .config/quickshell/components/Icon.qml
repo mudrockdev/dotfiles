@@ -17,10 +17,15 @@ Item {
     implicitWidth: size
     implicitHeight: size
 
-    IconImage {
+    // IconImage yerine düz Image: IconImage, yerleşim bitmeden (boyut 0) SVG'yi doğal
+    // boyutunda çizmeye çalışıyor ("requested buffer size is too big" uyarıları).
+    Image {
         id: img
         anchors.fill: parent
         asynchronous: true
+        fillMode: Image.PreserveAspectFit
+        sourceSize.width: root.size
+        sourceSize.height: root.size
         source: {
             const i = root.icon;
             if (i === "")

@@ -15,6 +15,9 @@ Singleton {
     property alias favorites: adapter.favorites
     // İlk çalıştırmada COSMIC favorileri bir kez içe aktarıldı mı
     property alias favoritesImported: adapter.favoritesImported
+    // Uygulama menüsü (whisker): favoriler (null = paneldeki başlatıcılar) ve son kullanılanlar
+    property alias menuFavorites: adapter.menuFavorites
+    property alias recentApps: adapter.recentApps
     // Dosya okunana kadar hiçbir şey yazılmaz; yoksa açılışta varsayılanlar kayıtlı ayarların üstüne yazılır
     property bool loaded: false
 
@@ -42,6 +45,8 @@ Singleton {
             property string theme: "default"
             property var favorites: []
             property bool favoritesImported: false
+            property var menuFavorites: null
+            property var recentApps: []
         }
     }
 }

@@ -74,6 +74,14 @@ PanelWindow {
                     Editor.cancel();
                 }
             }
+            MenuItem {
+                text: "Reload config"
+                icon: "view-refresh-symbolic"
+                onTriggered: {
+                    panelMenu.visible = false;
+                    Quickshell.reload(false);
+                }
+            }
         }
 
         // Sol: başlatıcı + uygulama listesi
