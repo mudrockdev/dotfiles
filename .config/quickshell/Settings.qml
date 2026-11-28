@@ -25,6 +25,8 @@ Singleton {
     property alias anchorScreen: adapter.anchorScreen
     // Boştayken hafifçe sallansın
     property alias anchorSwing: adapter.anchorSwing
+    // Pencerelerin üstünde göster (kapalıyken yalnızca masaüstünde)
+    property alias anchorOverApps: adapter.anchorOverApps
     // Dosya okunana kadar hiçbir şey yazılmaz; yoksa açılışta varsayılanlar kayıtlı ayarların üstüne yazılır
     property bool loaded: false
 
@@ -58,6 +60,7 @@ Singleton {
             property bool hangingAnchor: false
             property string anchorScreen: ""
             property bool anchorSwing: true
+            property bool anchorOverApps: false
         }
     }
 }

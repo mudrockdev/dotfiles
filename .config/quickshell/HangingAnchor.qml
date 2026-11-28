@@ -14,14 +14,18 @@ Scope {
     readonly property string screenName: Settings.anchorScreen !== "" && Quickshell.screens.some(s => s.name === Settings.anchorScreen) ? Settings.anchorScreen : (Quickshell.screens[0]?.name ?? "")
 
     Variants {
-        model: root.enabled ? Quickshell.screens.filter(s => s.name === root.screenName) : []
+        // Katman değişince pencere yeniden oluşturulsun diye katman da modelde
+        model: root.enabled ? Quickshell.screens.filter(s => s.name === root.screenName).map(s => ({
+                    screen: s,
+                    overApps: Settings.anchorOverApps
+                })) : []
 
         PanelWindow {
             id: win
 
-            required property ShellScreen modelData
+            required property var modelData
 
-            screen: modelData
+            screen: modelData.screen
             anchors {
                 top: true
                 bottom: true
@@ -33,7 +37,9 @@ Scope {
             color: "transparent"
 
             WlrLayershell.namespace: "quickshell-anchor"
-            WlrLayershell.layer: WlrLayer.Top
+            // Varsayılan: masaüstü katmanı (pencerelerin altında; yalnızca üstü açıkken görünür
+            // ve tutulabilir). "Show over apps" açıkken pencerelerin üstünde.
+            WlrLayershell.layer: modelData.overApps ? WlrLayer.Top : WlrLayer.Bottom
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
             // Yalnızca çapa tıklanabilir
@@ -52,7 +58,7 @@ Scope {
             readonly property real stepDt: 1 / 120
 
             // Zincir panelin tema seçici düğmesinden başlar
-            readonly property real mountX: Theme.selectorX[win.modelData.name] ?? width * 0.8
+            readonly property real mountX: Theme.selectorX[win.modelData.screen.name] ?? width * 0.8
             property var pts: []    // [{x, y}] — 0 bağlantı noktası, son nokta çapa
             property var prev: []
             property bool dragging: false

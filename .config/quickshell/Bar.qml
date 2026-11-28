@@ -148,6 +148,15 @@ PanelWindow {
                         checked: Settings.anchorSwing
                         onToggled: Settings.anchorSwing = !Settings.anchorSwing
                     }
+                    Toggle {
+                        visible: Theme.azur && Settings.hangingAnchor
+                        text: "Show over apps"
+                        icon: "focus-windows-symbolic"
+                        bold: false
+                        subtitle: Settings.anchorOverApps ? "Always on top of windows" : "Only on the desktop, behind windows"
+                        checked: Settings.anchorOverApps
+                        onToggled: Settings.anchorOverApps = !Settings.anchorOverApps
+                    }
                     SectionTitle {
                         visible: Theme.azur && Settings.hangingAnchor
                         text: "Monitor"
